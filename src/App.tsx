@@ -9,6 +9,7 @@ import Buildings from "./pages/Buildings";
 import Leads from "./pages/Leads";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
+import BuildingDetail from "./pages/BuildingDetail";
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -32,6 +33,8 @@ export default function App() {
         >
           <Route index element={<Dashboard />} />
           <Route path="buildings" element={<Buildings />} />
+          <Route path="buildings/:id" element={<BuildingDetail />} />
+
           <Route path="leads" element={<Leads />} />
         </Route>
       </Routes>

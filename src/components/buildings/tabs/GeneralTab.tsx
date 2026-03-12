@@ -18,6 +18,10 @@ const Field = ({ label, value, onChange, type = "text" }: any) => (
 );
 
 export default function GeneralTab({ data, onChange }: Props) {
+  const g = data.general || {};
+  const updateGeneral = (key: string, v: string) =>
+    onChange({ general: { ...g, [key]: v } });
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <Field
@@ -39,10 +43,8 @@ export default function GeneralTab({ data, onChange }: Props) {
       />
       <Field
         label="מספר חנויות"
-        value={data.general?.shops}
-        onChange={(v: string) =>
-          onChange({ general: { ...data.general, shops: v } })
-        }
+        value={g.shops}
+        onChange={(v: string) => updateGeneral("shops", v)}
       />
       <Field
         label="קוד כניסה"
@@ -57,31 +59,58 @@ export default function GeneralTab({ data, onChange }: Props) {
       />
       <Field
         label="מיקום ארגז כלים"
-        value={data.general?.toolboxLocation}
-        onChange={(v: string) =>
-          onChange({ general: { ...data.general, toolboxLocation: v } })
-        }
+        value={g.toolboxLocation}
+        onChange={(v: string) => updateGeneral("toolboxLocation", v)}
       />
       <Field
         label="מיקום ועד תיבה"
-        value={data.general?.committeeBoxLocation}
-        onChange={(v: string) =>
-          onChange({ general: { ...data.general, committeeBoxLocation: v } })
-        }
+        value={g.committeeBoxLocation}
+        onChange={(v: string) => updateGeneral("committeeBoxLocation", v)}
       />
       <Field
         label="מיקום צקים"
-        value={data.general?.checksLocation}
-        onChange={(v: string) =>
-          onChange({ general: { ...data.general, checksLocation: v } })
-        }
+        value={g.checksLocation}
+        onChange={(v: string) => updateGeneral("checksLocation", v)}
       />
       <Field
         label="מיקום סולם"
-        value={data.general?.ladderLocation}
-        onChange={(v: string) =>
-          onChange({ general: { ...data.general, ladderLocation: v } })
-        }
+        value={g.ladderLocation}
+        onChange={(v: string) => updateGeneral("ladderLocation", v)}
+      />
+      <Field
+        label="שיבר מרכזי"
+        value={g.mainShiver}
+        onChange={(v: string) => updateGeneral("mainShiver", v)}
+      />
+      <Field
+        label="לוח חשמל ראשי"
+        value={g.mainElectricPanel}
+        onChange={(v: string) => updateGeneral("mainElectricPanel", v)}
+      />
+      <Field
+        label="אחראי צ'קים לספקים"
+        value={g.checksResponsible}
+        onChange={(v: string) => updateGeneral("checksResponsible", v)}
+      />
+      <Field
+        label="מיקום ערכת עזרה ראשונה"
+        value={g.firstAidLocation}
+        onChange={(v: string) => updateGeneral("firstAidLocation", v)}
+      />
+      <Field
+        label="דייר איש קשר טכני"
+        value={g.techContactTenant}
+        onChange={(v: string) => updateGeneral("techContactTenant", v)}
+      />
+      <Field
+        label="מנקה שיכול לעזור בבניין"
+        value={g.helperCleaner}
+        onChange={(v: string) => updateGeneral("helperCleaner", v)}
+      />
+      <Field
+        label="מנהל לקוח (בניין)"
+        value={g.clientManager}
+        onChange={(v: string) => updateGeneral("clientManager", v)}
       />
     </div>
   );

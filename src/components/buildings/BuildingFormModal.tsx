@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { addBuilding, updateBuilding } from "../../lib/buildings.service";
+import type { Building } from "../../types";
 import GeneralTab from "./tabs/GeneralTab";
 import TechnicalTab from "./tabs/TechnicalTab";
 import SuppliersTab from "./tabs/SuppliersTab";
 import BankInsuranceTab from "./tabs/BankInsuranceTab";
 import KeysTab from "./tabs/KeysTab";
 import NotesTab from "./tabs/NotesTab";
-import type { Building } from "../../types";
 
 const TABS = [
   { id: "general", label: "כללי" },
@@ -31,7 +31,7 @@ export default function BuildingFormModal({ building, onClose }: Props) {
   const update = (section: keyof Building, values: any) =>
     setData((prev) => ({
       ...prev,
-      [section]: { ...(prev[section] as any), ...values },
+      [section]: { ...((prev[section] as any) || {}), ...values },
     }));
 
   const handleSave = async () => {
@@ -63,13 +63,17 @@ export default function BuildingFormModal({ building, onClose }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="flex overflow-x-auto border-b">
+        <div className="flex border-b">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
               className={`px-4 py-2 text-sm whitespace-nowrap font-medium border-b-2 transition-colors
-                ${activeTab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-gray-500 hover:text-gray-700"}`}
+                ${
+                  activeTab === t.id
+                    ? "border-blue-600 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
+                }`}
             >
               {t.label}
             </button>
@@ -81,25 +85,27 @@ export default function BuildingFormModal({ building, onClose }: Props) {
           {activeTab === "general" && (
             <GeneralTab
               data={data}
-              onChange={(v) => setData((p) => ({ ...p, ...v }))}
+              onChange={(v: Partial<Building>) =>
+                setData((p) => ({ ...p, ...v }))
+              }
             />
           )}
           {activeTab === "technical" && (
             <TechnicalTab
-              data={data.technical || {}}
-              onChange={(v: any) => update("technical", v)}
+              data={data}
+              onChange={(section: keyof Building, v: any) => update(section, v)}
             />
           )}
           {activeTab === "suppliers" && (
             <SuppliersTab
-              data={data.suppliers || {}}
-              onChange={(v: any) => update("suppliers", v)}
+              data={data}
+              onChange={(section: keyof Building, v: any) => update(section, v)}
             />
           )}
           {activeTab === "bank" && (
             <BankInsuranceTab
-              data={{ ...data.bank, ...data.insurance }}
-              onChange={(v: any) => update("bank", v)}
+              data={data}
+              onChange={(section: keyof Building, v: any) => update(section, v)}
             />
           )}
           {activeTab === "keys" && (
@@ -111,7 +117,9 @@ export default function BuildingFormModal({ building, onClose }: Props) {
           {activeTab === "notes" && (
             <NotesTab
               data={data}
-              onChange={(v: any) => setData((p) => ({ ...p, ...v }))}
+              onChange={(v: Partial<Building>) =>
+                setData((p) => ({ ...p, ...v }))
+              }
             />
           )}
         </div>
