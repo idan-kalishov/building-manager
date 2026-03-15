@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { addLead, updateLead } from "../../lib/leads.service";
 import type { Lead, LeadStatus, LeadPriority } from "../../types";
+import ConfirmModal from "../ConfirmModal";
+import InputModal from "../InputModal";
 
 interface Props {
   lead?: Lead | null;
@@ -28,6 +30,8 @@ export default function LeadFormModal({
   const [data, setData] = useState<Partial<Lead>>(
     lead || { status: defaultStatus },
   );
+  const [showAddField, setShowAddField] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const f = (key: keyof Lead) => ({
     value: data[key],
@@ -42,6 +46,28 @@ export default function LeadFormModal({
       await addLead(data as Omit<Lead, "id">);
     }
     onClose();
+  };
+
+  const handleAddField = (label: string) => {
+    const updated = [
+      ...(data.customFields || []),
+      { id: crypto.randomUUID(), label, value: "" },
+    ];
+    setData((p) => ({ ...p, customFields: updated }));
+    setShowAddField(false);
+  };
+
+  const handleFieldChange = (fieldId: string, value: string) => {
+    const updated = (data.customFields || []).map((f) =>
+      f.id !== fieldId ? f : { ...f, value },
+    );
+    setData((p) => ({ ...p, customFields: updated }));
+  };
+
+  const handleDeleteField = (fieldId: string) => {
+    const updated = (data.customFields || []).filter((f) => f.id !== fieldId);
+    setData((p) => ({ ...p, customFields: updated }));
+    setConfirmDelete(null);
   };
 
   return (
@@ -114,7 +140,7 @@ export default function LeadFormModal({
           <Field label="תאריך שליחת הצעה" {...f("proposalDate")} type="date" />
           <Field label="תאריך המשך טיפול" {...f("followUpDate")} type="date" />
 
-          {/* וידאו */}
+          {/* וידוא */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">
               וידוא קבלת ההצעה
@@ -126,11 +152,11 @@ export default function LeadFormModal({
                   setData((p) => ({ ...p, proposalConfirmed: true }))
                 }
                 className={`flex-1 py-2 rounded-lg text-sm border transition-colors
-        ${
-          data.proposalConfirmed === true
-            ? "bg-green-600 text-white border-green-600"
-            : "border-gray-300 hover:bg-gray-50"
-        }`}
+                  ${
+                    data.proposalConfirmed === true
+                      ? "bg-green-600 text-white border-green-600"
+                      : "border-gray-300 hover:bg-gray-50"
+                  }`}
               >
                 ✅ אישרו קבלה
               </button>
@@ -140,12 +166,12 @@ export default function LeadFormModal({
                   setData((p) => ({ ...p, proposalConfirmed: false }))
                 }
                 className={`flex-1 py-2 rounded-lg text-sm border transition-colors
-        ${
-          data.proposalConfirmed === false &&
-          data.proposalConfirmed !== undefined
-            ? "bg-red-500 text-white border-red-500"
-            : "border-gray-300 hover:bg-gray-50"
-        }`}
+                  ${
+                    data.proposalConfirmed === false &&
+                    data.proposalConfirmed !== undefined
+                      ? "bg-red-500 text-white border-red-500"
+                      : "border-gray-300 hover:bg-gray-50"
+                  }`}
               >
                 ❌ לא ענו
               </button>
@@ -183,6 +209,48 @@ export default function LeadFormModal({
               className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
+
+          {/* ===== שדות מותאמים אישית ===== */}
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-600">
+              📌 שדות נוספים
+            </label>
+            <div className="border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
+              {(data.customFields || []).length === 0 && (
+                <p className="text-gray-400 text-xs text-center py-1">
+                  אין שדות נוספים עדיין
+                </p>
+              )}
+              {(data.customFields || []).map((field) => (
+                <div key={field.id} className="flex items-center gap-2">
+                  <span className="text-gray-500 text-sm w-1/3 shrink-0">
+                    {field.label}
+                  </span>
+                  <input
+                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                    value={field.value}
+                    placeholder="ערך..."
+                    onChange={(e) =>
+                      handleFieldChange(field.id, e.target.value)
+                    }
+                  />
+                  <button
+                    onClick={() => setConfirmDelete(field.id)}
+                    className="text-red-400 hover:text-red-600 text-sm px-1 shrink-0"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() => setShowAddField(true)}
+                className="w-full text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg py-2 mt-1"
+              >
+                + הוסף שדה
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Footer */}
@@ -201,6 +269,25 @@ export default function LeadFormModal({
           </button>
         </div>
       </div>
+
+      {showAddField && (
+        <InputModal
+          title="שם השדה החדש"
+          placeholder="לדוגמה: מספר חוזה"
+          confirmLabel="הוסף שדה"
+          onConfirm={handleAddField}
+          onCancel={() => setShowAddField(false)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="למחוק שדה?"
+          confirmLabel="מחק"
+          onConfirm={() => handleDeleteField(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }

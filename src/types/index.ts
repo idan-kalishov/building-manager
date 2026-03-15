@@ -22,31 +22,27 @@ export interface Task {
 
 export interface Lead {
   id?: string;
-  // פרטי ועד
   address?: string;
   tenantsCount?: number;
   name: string;
   phone: string;
   email?: string;
-  // תחרות
   currentCompany?: string;
   currentCost?: number;
-  // הצעה
   proposalDate?: string;
   proposalConfirmed?: boolean;
   followUpDate?: string;
   followUpNotes?: string;
-  // עלויות מוצעות
   managementCost?: number;
   cleaningCost?: string;
   gardeningCost?: string;
-  // מטא
   status: LeadStatus;
   priority?: LeadPriority;
   order?: number;
   notes?: string;
   createdAt?: any;
   updatedAt?: any;
+  customFields?: { id: string; label: string; value: string }[];
 }
 
 export interface Building {
@@ -79,4 +75,9 @@ export interface Building {
   shelter?: Record<string, any>;
   municipality?: Record<string, any>;
   committee?: Record<string, any>;
+  customSections?: {
+    id: string;
+    title: string;
+    fields: { id: string; label: string; value: string }[];
+  }[];
 }

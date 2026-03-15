@@ -43,33 +43,37 @@ export default function Buildings() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {buildings.map((b) => (
-          <div
-            key={b.id}
-            onClick={() => navigate(`/buildings/${b.id}`)}
-            className="flex items-center justify-between bg-white px-4 py-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 hover:border-blue-200 transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🏢</span>
-              <p className="font-semibold text-gray-800">{b.address}</p>
-            </div>
+        {[...buildings]
+          .sort((a, b) =>
+            (a.address || "").localeCompare(b.address || "", "he"),
+          )
+          .map((b) => (
+            <div
+              key={b.id}
+              onClick={() => navigate(`/buildings/${b.id}`)}
+              className="flex items-center justify-between bg-white px-4 py-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 hover:border-blue-200 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">🏢</span>
+                <p className="font-semibold text-gray-800">{b.address}</p>
+              </div>
 
-            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={(e) => handleEdit(e, b)}
-                className="border border-blue-400 text-blue-600 px-3 py-1 rounded-lg text-sm hover:bg-blue-50"
-              >
-                ✏️
-              </button>
-              <button
-                onClick={(e) => b.id && handleDelete(e, b.id)}
-                className="border border-red-300 text-red-500 px-3 py-1 rounded-lg text-sm hover:bg-red-50"
-              >
-                🗑️
-              </button>
+              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={(e) => handleEdit(e, b)}
+                  className="border border-blue-400 text-blue-600 px-3 py-1 rounded-lg text-sm hover:bg-blue-50"
+                >
+                  ✏️
+                </button>
+                <button
+                  onClick={(e) => b.id && handleDelete(e, b.id)}
+                  className="border border-red-300 text-red-500 px-3 py-1 rounded-lg text-sm hover:bg-red-50"
+                >
+                  🗑️
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
         {buildings.length === 0 && (
           <p className="text-gray-400 text-center py-10">אין בניינים עדיין.</p>
         )}

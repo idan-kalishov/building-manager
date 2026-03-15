@@ -1,5 +1,8 @@
+import { useState } from "react";
 import type { Lead, LeadPriority } from "../../types";
-import { deleteLead } from "../../lib/leads.service";
+import { deleteLead, updateLead } from "../../lib/leads.service";
+import ConfirmModal from "../ConfirmModal";
+import InputModal from "../InputModal";
 
 interface Props {
   lead: Lead;
@@ -39,12 +42,34 @@ function isOverdue(dateStr?: string) {
 
 export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
   const overdue = isOverdue(lead.followUpDate);
+  const [showAddField, setShowAddField] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const handleDelete = async () => {
-    if (confirm("למחוק ליד זה?")) {
-      await deleteLead(lead.id!);
-      onClose();
-    }
+    await deleteLead(lead.id!);
+    onClose();
+  };
+
+  const handleAddField = (label: string) => {
+    const updated = [
+      ...(lead.customFields || []),
+      { id: crypto.randomUUID(), label, value: "" },
+    ];
+    updateLead(lead.id!, { customFields: updated });
+    setShowAddField(false);
+  };
+
+  const handleFieldChange = (fieldId: string, value: string) => {
+    const updated = (lead.customFields || []).map((f) =>
+      f.id !== fieldId ? f : { ...f, value },
+    );
+    updateLead(lead.id!, { customFields: updated });
+  };
+
+  const handleDeleteField = (fieldId: string) => {
+    const updated = (lead.customFields || []).filter((f) => f.id !== fieldId);
+    updateLead(lead.id!, { customFields: updated });
+    setConfirmDelete(null);
   };
 
   return (
@@ -71,14 +96,12 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Warning banner */}
           {overdue && (
             <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-red-600 text-sm font-medium">
               ⚠️ מועד המשך טיפול עבר! ({lead.followUpDate})
             </div>
           )}
 
-          {/* Priority */}
           {lead.priority && (
             <div className="text-sm font-medium">
               עדיפות: {PRIORITY_LABEL[lead.priority]}
@@ -142,7 +165,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
                     : undefined
               }
             />
-
             <Row label="מועד המשך טיפול" value={lead.followUpDate} />
             <Row label="המשך טיפול" value={lead.followUpNotes} />
           </section>
@@ -155,6 +177,44 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
               <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
                 {lead.notes}
               </p>
+            </section>
+          )}
+
+          {/* ===== שדות מותאמים אישית ===== */}
+          {((lead.customFields || []).length > 0 || true) && (
+            <section>
+              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+                📌 שדות נוספים
+              </h3>
+              {(lead.customFields || []).map((field) => (
+                <div
+                  key={field.id}
+                  className="flex justify-between items-center py-2 border-b border-gray-100 gap-2"
+                >
+                  <span className="text-gray-500 text-sm w-1/3">
+                    {field.label}
+                  </span>
+                  <input
+                    className="text-sm text-gray-800 font-medium text-right flex-1 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none bg-transparent"
+                    value={field.value}
+                    onChange={(e) =>
+                      handleFieldChange(field.id, e.target.value)
+                    }
+                  />
+                  <button
+                    onClick={() => setConfirmDelete(field.id)}
+                    className="text-red-400 hover:text-red-600 text-xs px-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => setShowAddField(true)}
+                className="mt-3 text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg w-full py-2"
+              >
+                + הוסף שדה
+              </button>
             </section>
           )}
         </div>
@@ -181,6 +241,25 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
           </button>
         </div>
       </div>
+
+      {showAddField && (
+        <InputModal
+          title="שם השדה החדש"
+          placeholder="לדוגמה: מספר חוזה"
+          confirmLabel="הוסף שדה"
+          onConfirm={handleAddField}
+          onCancel={() => setShowAddField(false)}
+        />
+      )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          title="למחוק שדה?"
+          confirmLabel="מחק"
+          onConfirm={() => handleDeleteField(confirmDelete)}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   );
 }
