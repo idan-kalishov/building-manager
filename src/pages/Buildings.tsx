@@ -42,42 +42,36 @@ export default function Buildings() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="flex flex-col gap-2">
         {buildings.map((b) => (
           <div
             key={b.id}
             onClick={() => navigate(`/buildings/${b.id}`)}
-            className="bg-white rounded-xl shadow p-4 space-y-2 cursor-pointer hover:shadow-md hover:border-blue-300 border-2 border-transparent transition-all"
+            className="flex items-center justify-between bg-white px-4 py-4 rounded-xl shadow-sm border border-gray-100 cursor-pointer hover:bg-gray-50 hover:border-blue-200 transition-all"
           >
-            <h2 className="text-lg font-semibold">{b.address}</h2>
-            <p className="text-gray-500 text-sm">
-              {b.units} דירות | {b.floors} קומות
-            </p>
-            {b.contractStart && (
-              <p className="text-gray-400 text-xs">
-                תחילת הסכם: {b.contractStart}
-              </p>
-            )}
-            <div className="flex gap-2 pt-2">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏢</span>
+              <p className="font-semibold text-gray-800">{b.address}</p>
+            </div>
+
+            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={(e) => handleEdit(e, b)}
-                className="flex-1 border border-blue-500 text-blue-600 py-1 rounded hover:bg-blue-50"
+                className="border border-blue-400 text-blue-600 px-3 py-1 rounded-lg text-sm hover:bg-blue-50"
               >
-                ✏️ עריכה
+                ✏️
               </button>
               <button
                 onClick={(e) => b.id && handleDelete(e, b.id)}
-                className="flex-1 border border-red-400 text-red-500 py-1 rounded hover:bg-red-50"
+                className="border border-red-300 text-red-500 px-3 py-1 rounded-lg text-sm hover:bg-red-50"
               >
-                🗑️ מחיקה
+                🗑️
               </button>
             </div>
           </div>
         ))}
         {buildings.length === 0 && (
-          <p className="text-gray-400 col-span-3 text-center mt-10">
-            אין בניינים עדיין.
-          </p>
+          <p className="text-gray-400 text-center py-10">אין בניינים עדיין.</p>
         )}
       </div>
 
