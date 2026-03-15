@@ -346,6 +346,14 @@ export default function Leads() {
                                     </p>
                                   )}
 
+                                  {lead.notes && (
+                                    <div className="mt-2 bg-gray-50 rounded-lg p-2 border border-gray-100">
+                                      <p className="text-xs text-gray-500 leading-relaxed">
+                                        💬 {lead.notes}
+                                      </p>
+                                    </div>
+                                  )}
+
                                   {/* Actions */}
                                   <div
                                     className="flex gap-1 mt-2"
