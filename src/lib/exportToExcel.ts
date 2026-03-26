@@ -24,12 +24,7 @@ export function exportBuildingsToExcel(buildings: Building[]) {
 
     // ===== כללי =====
     const general = building.general || {};
-    const keys = building.keys || {};
-    if (
-      Object.values(general).some((v) => v) ||
-      Object.values(keys).some((v) => v) ||
-      building.specialNotes
-    ) {
+    if (Object.values(general).some((v) => v) || building.specialNotes) {
       wsData.push(["📋 כללי"]);
       push("מנהל לקוח (בניין)", general.clientManager);
       push("מספר חנויות", general.shops);
@@ -41,10 +36,17 @@ export function exportBuildingsToExcel(buildings: Building[]) {
       push("מיקום ערכת עזרה ראשונה", general.firstAidLocation);
       push("דייר איש קשר טכני", general.techContactTenant);
       push("מנקה שיכול לעזור", general.helperCleaner);
-      push("מפתח לתיבת ועד", keys.mailboxKey);
-      push("מיקום ספייר מפתחות", keys.spareKeysLocation);
-      push("מספר ספייר מפתחות", keys.spareKeysCount);
       push("הערות מיוחדות לבניין", building.specialNotes);
+      wsData.push([]);
+    }
+
+    // ===== מפתחות =====
+    const keys = building.keys || {};
+    if (Object.values(keys).some((v) => v)) {
+      wsData.push(["🔑 מפתחות"]);
+      push("  מפתח לתיבת ועד", keys.mailboxKey);
+      push("  מיקום ספייר מפתחות", keys.spareKeysLocation);
+      push("  מספר ספייר מפתחות", keys.spareKeysCount);
       wsData.push([]);
     }
 
@@ -267,7 +269,7 @@ export function exportBuildingsToExcel(buildings: Building[]) {
         push("    מסדרונות – צבע", lights.corridorColor);
         push("    חדר מדרגות – דגם", lights.stairsModel);
         push("    חדר מדרגות – צבע", lights.stairsColor);
-        push("    מפיצי ריח – מספר סידורי", lights.airFreshenerSerial);
+
         wsData.push([]);
       }
     }
@@ -384,7 +386,7 @@ export function exportBuildingsToExcel(buildings: Building[]) {
         row.length > 0 &&
         row[0] &&
         typeof row[0] === "string" &&
-        /^[⚡📋🔧👷💰🏛️📝🔹📍🏢📅]/.test(row[0]) &&
+        /^[⚡📋🔑🔧👷💰🏛️📝🔹📍🏢📅]/.test(row[0]) &&
         !row[0].startsWith("  ")
       ) {
         const cellRef = XLSX.utils.encode_cell({ r: i, c: 0 });

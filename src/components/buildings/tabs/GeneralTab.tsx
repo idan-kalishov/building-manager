@@ -104,19 +104,23 @@ export default function GeneralTab({ data, onChange }: Props) {
         onChange={(v: string) => updateGeneral("helperCleaner", v)}
       />
 
-      {/* מפתחות — שדות שנשארו */}
+      {/* מפתחות */}
+      <div className="md:col-span-2 border-t pt-4 mt-2">
+        <p className="text-sm font-semibold text-gray-700 mb-3">🔑 מפתחות</p>
+      </div>
+
       <Field
         label="מפתח לתיבת ועד"
         value={keys.mailboxKey}
         onChange={(v: string) => updateKeys("mailboxKey", v)}
       />
       <Field
-        label="מיקום ספייר מפתחות"
+        label="מיקום מפתחות ספייר"
         value={keys.spareKeysLocation}
         onChange={(v: string) => updateKeys("spareKeysLocation", v)}
       />
       <Field
-        label="מספר ספייר מפתחות"
+        label="מספר מפתחות ספייר"
         value={keys.spareKeysCount}
         onChange={(v: string) => updateKeys("spareKeysCount", v)}
       />

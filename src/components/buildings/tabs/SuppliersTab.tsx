@@ -94,10 +94,6 @@ export default function SuppliersTab({
           label="חדר מדרגות – צבע"
           {...f("lights", lights, "stairsColor")}
         />
-        <Field
-          label="מפיצי ריח – מספר סידורי"
-          {...f("lights", lights, "airFreshenerSerial")}
-        />
       </div>
 
       <Section title="🌿 גינון" />

@@ -65,7 +65,7 @@ export default function BuildingFormModal({ building, onClose }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b overflow-x-auto">
+        <div className="flex border-b ">
           {TABS.map((t) => (
             <button
               key={t.id}

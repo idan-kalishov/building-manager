@@ -160,15 +160,12 @@ export default function BuildingDetail() {
         <Row label="מספר חנויות" value={g.shops} />
         <Row label="מיקום ארגז כלים" value={g.toolboxLocation} />
         <Row label="מיקום תיבת ועד" value={g.committeeBoxLocation} />
-        <Row label="מפתח לתיבת ועד" value={keys.mailboxKey} />
         <Row label="מיקום צקים" value={g.checksLocation} />
         <Row label="מיקום סולם" value={g.ladderLocation} />
         <Row label="אחראי צ'קים לספקים" value={g.checksResponsible} />
         <Row label="מיקום ערכת עזרה ראשונה" value={g.firstAidLocation} />
         <Row label="דייר איש קשר טכני" value={g.techContactTenant} />
         <Row label="מנקה שיכול לעזור" value={g.helperCleaner} />
-        <Row label="מיקום ספייר מפתחות" value={keys.spareKeysLocation} />
-        <Row label="מספר ספייר מפתחות" value={keys.spareKeysCount} />
         {building.specialNotes && (
           <div className="pt-2">
             <p className="text-gray-500 text-sm mb-1">הערות מיוחדות לבניין</p>
@@ -183,6 +180,15 @@ export default function BuildingDetail() {
           </p>
         )}
       </AccordionSection>
+
+      {/* מפתחות */}
+      {(keys.mailboxKey || keys.spareKeysLocation || keys.spareKeysCount) && (
+        <AccordionSection title="מפתחות" icon="🔑">
+          <Row label="מפתח לתיבת ועד" value={keys.mailboxKey} />
+          <Row label="מיקום ספייר מפתחות" value={keys.spareKeysLocation} />
+          <Row label="מספר ספייר מפתחות" value={keys.spareKeysCount} />
+        </AccordionSection>
+      )}
 
       {hasData(ic) && (
         <AccordionSection title="אינטרקום" icon="🔔">
@@ -344,10 +350,6 @@ export default function BuildingDetail() {
           <Row label="מסדרונות – צבע" value={lights.corridorColor} />
           <Row label="חדר מדרגות – דגם" value={lights.stairsModel} />
           <Row label="חדר מדרגות – צבע" value={lights.stairsColor} />
-          <Row
-            label="מפיצי ריח – מספר סידורי"
-            value={lights.airFreshenerSerial}
-          />
         </AccordionSection>
       )}
 
