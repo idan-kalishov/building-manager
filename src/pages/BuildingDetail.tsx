@@ -8,6 +8,7 @@ import AccordionSection from "../components/buildings/AccordionSection";
 import BuildingFormModal from "../components/buildings/BuildingFormModal";
 import ConfirmModal from "../components/ConfirmModal";
 import InputModal from "../components/InputModal";
+import { exportBuildingsToExcel } from "../lib/exportToExcel";
 
 const Row = ({ label, value }: { label: string; value?: any }) =>
   value ? (
@@ -54,7 +55,7 @@ export default function BuildingDetail() {
   const elev = building.elevator || {};
   const roof = building.roof || {};
   const gas = building.gas || {};
-  const park = building.parking || {};
+  const gates = building.gates || {};
   const fire = building.firefighting || {};
   const shelter = building.shelter || {};
   const water = building.water || {};
@@ -68,6 +69,7 @@ export default function BuildingDetail() {
   const keys = building.keys || {};
   const muni = building.municipality || {};
   const comm = building.committee || {};
+  const cult = building.culturalAssociation || {};
 
   const hasData = (obj: Record<string, any>) =>
     Object.values(obj).some((v) => v);
@@ -132,37 +134,50 @@ export default function BuildingDetail() {
           <div className="flex gap-4 mt-2 text-sm text-gray-500 flex-wrap">
             <span>🏠 {building.units} דירות</span>
             <span>📐 {building.floors} קומות</span>
-            {building.contractStart && (
-              <span>📅 תחילת הסכם: {building.contractStart}</span>
-            )}
+            {g.clientManager && <span>👤 {g.clientManager}</span>}
           </div>
         </div>
-        <button
-          onClick={() => setShowEdit(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-        >
-          ✏️ עריכה
-        </button>
+
+        <div className="flex gap-2 flex-shrink-0">
+          <button
+            onClick={() => exportBuildingsToExcel([building])}
+            className="flex items-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 font-semibold text-sm"
+          >
+            📊 ייצוא לאקסל
+          </button>
+          <button
+            onClick={() => setShowEdit(true)}
+            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            ✏️ עריכה
+          </button>
+        </div>
       </div>
 
-      {/* הסבר למשתמש */}
-
-      {/* כללי — תמיד מוצג */}
+      {/* כללי */}
       <AccordionSection title="כללי" icon="📋" defaultOpen={true}>
-        <Row label="קוד כניסה" value={building.entryCode} />
+        <Row label="מנהל לקוח (בניין)" value={g.clientManager} />
         <Row label="מספר חנויות" value={g.shops} />
         <Row label="מיקום ארגז כלים" value={g.toolboxLocation} />
-        <Row label="מיקום ועד תיבה" value={g.committeeBoxLocation} />
+        <Row label="מיקום תיבת ועד" value={g.committeeBoxLocation} />
+        <Row label="מפתח לתיבת ועד" value={keys.mailboxKey} />
         <Row label="מיקום צקים" value={g.checksLocation} />
         <Row label="מיקום סולם" value={g.ladderLocation} />
-        <Row label="שיבר מרכזי" value={g.mainShiver} />
-        <Row label="לוח חשמל ראשי" value={g.mainElectricPanel} />
         <Row label="אחראי צ'קים לספקים" value={g.checksResponsible} />
         <Row label="מיקום ערכת עזרה ראשונה" value={g.firstAidLocation} />
         <Row label="דייר איש קשר טכני" value={g.techContactTenant} />
         <Row label="מנקה שיכול לעזור" value={g.helperCleaner} />
-        <Row label="מנהל לקוח (בניין)" value={g.clientManager} />
-        {!hasData(g) && !building.entryCode && (
+        <Row label="מיקום ספייר מפתחות" value={keys.spareKeysLocation} />
+        <Row label="מספר ספייר מפתחות" value={keys.spareKeysCount} />
+        {building.specialNotes && (
+          <div className="pt-2">
+            <p className="text-gray-500 text-sm mb-1">הערות מיוחדות לבניין</p>
+            <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed bg-gray-50 rounded-lg p-3">
+              {building.specialNotes}
+            </p>
+          </div>
+        )}
+        {!hasData(g) && !building.specialNotes && (
           <p className="text-gray-400 text-sm text-center py-2">
             אין מידע עדיין – לחץ עריכה להוספה
           </p>
@@ -189,6 +204,7 @@ export default function BuildingDetail() {
           <Row label="מיקום שעון שבת" value={elec.shabbatClockLocation} />
           <Row label="סוג לוח חשמל" value={elec.panelType} />
           <Row label="מיקום לוח חשמל ראשי" value={elec.mainPanelLocation} />
+          <Row label="מיקום נקודת חשמל" value={elec.powerOutletLocation} />
           <Row label="צורת תשלום" value={elec.paymentMethod} />
           <Row label="בדיקת פחת לבניין" value={elec.depreciationCheck} />
           <Row label="בדיקת הארקה לבניין" value={elec.groundingCheck} />
@@ -198,15 +214,20 @@ export default function BuildingDetail() {
       {hasData(elev) && (
         <AccordionSection title="מעלית" icon="🛗">
           <Row label="מספר מעליות" value={elev.count} />
+          <Row label="מספר תחנות" value={elev.stationsCount} />
           <Row label="סוג מעלית" value={elev.type} />
           <Row label="חברת מעליות" value={elev.company} />
           <Row label="טלפון חברה" value={elev.companyPhone} />
           <Row label="מהנדס מעליות" value={elev.engineer} />
           <Row label="טלפון מהנדס" value={elev.engineerPhone} />
           <Row label="עלות קריאת שרות" value={elev.serviceCallCost} />
+          <Row label="ביטוח חלפים" value={elev.partsInsurance} />
+          <Row label="ספק הטלפון" value={elev.phoneProvider} />
+          <Row label="על שם מי קו הטלפון" value={elev.phoneLineOwner} />
           <Row label="מספר קו הטלפון" value={elev.phoneLineNumber} />
           <Row label="מיקום חדר מעלית" value={elev.roomLocation} />
-          <Row label="צורת תשלום" value={elev.paymentMethod} />
+          <Row label="מפתח לחדר מעלית" value={elev.roomKey} />
+          <Row label="צורת תשלום לחברת המעליות" value={elev.paymentMethod} />
         </AccordionSection>
       )}
 
@@ -227,24 +248,27 @@ export default function BuildingDetail() {
           <Row label="ספק גז" value={gas.supplier} />
           <Row label="טלפון ספק" value={gas.supplierPhone} />
           <Row label="טלפון חירום" value={gas.emergencyPhone} />
-          <Row label="סוג מיכלי גז" value={gas.tankType} />
+          <Row label="צובר גז" value={gas.tankExists} />
+          <Row label="מיקום צובר גז" value={gas.tankLocation} />
           <Row label="מיקום שעוני גז" value={gas.metersLocation} />
           <Row label="מיקום בלוני גז" value={gas.cylindersLocation} />
-          <Row label="עלות לקוב" value={gas.costPerCubic} />
           <Row label="מפתח לחדר גז" value={gas.roomKey} />
           <Row label="מספר מרכזיה בחב׳ הגז" value={gas.centralNumber} />
         </AccordionSection>
       )}
 
-      {hasData(park) && (
-        <AccordionSection title="חניה" icon="🅿️">
-          <Row label="חברת חניה" value={park.company} />
-          <Row label="טלפון חברה" value={park.companyPhone} />
-          <Row label="מיקום מפתח שער נגרר" value={park.gateKeyLocation} />
-          <Row label="מיקום מפתח מחסום" value={park.barrierKeyLocation} />
-          <Row label="איך פותחים שער נגרר" value={park.gateOpenMethod} />
-          <Row label="מיקום שלט למחסום" value={park.remoteLocation} />
-          <Row label="פתיחה סלולרית – מספר" value={park.mobileOpenNumber} />
+      {hasData(gates) && (
+        <AccordionSection title="שערים" icon="🚪">
+          <Row label="שם חברת שערים" value={gates.company} />
+          <Row label="טלפון חברה" value={gates.companyPhone} />
+          <Row label="שם אפליקציה לפתיחת שער" value={gates.appName} />
+          <Row label="מיקום מפתח שער נגרר" value={gates.gateKeyLocation} />
+          <Row label="מפתח לשער נגרר" value={gates.gateKey} />
+          <Row label="מיקום מפתח מחסום" value={gates.barrierKeyLocation} />
+          <Row label="מפתח למחסום" value={gates.barrierKey} />
+          <Row label="איך פותחים שער נגרר" value={gates.gateOpenMethod} />
+          <Row label="מיקום שלט למחסום" value={gates.remoteLocation} />
+          <Row label="פתיחה סלולרית – מספר" value={gates.mobileOpenNumber} />
         </AccordionSection>
       )}
 
@@ -274,6 +298,7 @@ export default function BuildingDetail() {
             value={water.privateMetersLocation}
           />
           <Row label="מיקום ברז מים" value={water.tapLocation} />
+          <Row label="מיקום שיבר מרכזי" value={water.mainShiverLocation} />
         </AccordionSection>
       )}
 
@@ -281,18 +306,18 @@ export default function BuildingDetail() {
         <AccordionSection title="ניקיון" icon="🧹">
           <Row label="שם מנקה" value={clean.name} />
           <Row label="טלפון מנקה" value={clean.phone} />
-          <Row label="ז.ת מנקה" value={clean.idNumber} />
+          <Row label="מנקה מוציא חשבוניות" value={clean.hasInvoices} />
+          <Row
+            label="מנקה ביטוח לאומי – פנקס"
+            value={clean.nationalInsuranceBooklet}
+          />
           <Row label="מספר פעמים בשבוע" value={clean.weeklyFrequency} />
           <Row label="ימי ניקיון" value={clean.days} />
           <Row label="ניקוי מסדרונות" value={clean.corridorsDays} />
           <Row label="ניקוי חדר מדרגות" value={clean.stairsDays} />
+          <Row label="מפיצי ריח" value={clean.airFreshener} />
+          <Row label="מפיצי ריח מיקום" value={clean.airFreshenerLocation} />
           <Row label="דגשים בניקיון" value={clean.notes} />
-          <Row label="דגם לובי" value={clean.lobbyModel} />
-          <Row label="צבע לובי" value={clean.lobbyColor} />
-          <Row label="דגם מסדרונות" value={clean.corridorModel} />
-          <Row label="צבע מסדרונות" value={clean.corridorColor} />
-          <Row label="דגם חדר מדרגות" value={clean.stairsModel} />
-          <Row label="צבע חדר מדרגות" value={clean.stairsColor} />
         </AccordionSection>
       )}
 
@@ -304,17 +329,21 @@ export default function BuildingDetail() {
           <Row label="מערכת השקיה אוטומטית" value={gard.autoIrrigation} />
           <Row label="דגם מערכת השקייה" value={gard.irrigationModel} />
           <Row label="מיקום מערכת השקיה" value={gard.irrigationLocation} />
+          <Row label="מיקום צינור השקייה" value={gard.irrigationPipeLocation} />
           <Row label="מיקום שיבר הגינה" value={gard.gardenShiverLocation} />
-          <Row label="ימי הוצאת גזם" value={gard.trimmingDays} />
-          <Row label="טלפון איסוף גזם" value={gard.trimmingPickupPhone} />
         </AccordionSection>
       )}
 
       {hasData(lights) && (
         <AccordionSection title="נורות ותאורה" icon="💡">
           <Row label="נורות כללי" value={lights.general} />
-          <Row label="מיקום ספייר נורות" value={lights.spareLocation} />
-          <Row label="מפיצי ריח – מיקום" value={lights.airFreshenerLocation} />
+          <Row label="מיקום נורות ספייר" value={lights.spareLocation} />
+          <Row label="לובי – דגם" value={lights.lobbyModel} />
+          <Row label="לובי – צבע" value={lights.lobbyColor} />
+          <Row label="מסדרונות – דגם" value={lights.corridorModel} />
+          <Row label="מסדרונות – צבע" value={lights.corridorColor} />
+          <Row label="חדר מדרגות – דגם" value={lights.stairsModel} />
+          <Row label="חדר מדרגות – צבע" value={lights.stairsColor} />
           <Row
             label="מפיצי ריח – מספר סידורי"
             value={lights.airFreshenerSerial}
@@ -358,32 +387,23 @@ export default function BuildingDetail() {
           <Row label="מייל סוכנות" value={ins.agencyEmail} />
           <Row label="מספר פוליסה" value={ins.policyNumber} />
           <Row label="מספר לקוח" value={ins.clientNumber} />
-          <Row label="אמצעי תשלום" value={ins.paymentMethod} />
           <Row label="ביטוח נזקי צנרת – ספק" value={ins.pipeDamageProvider} />
           <Row label="ביטוח נזקי צנרת – טלפון" value={ins.pipeDamagePhone} />
+          <Row
+            label="נזקי צנרת השתתפות עצמית"
+            value={ins.pipeDamageDeductible}
+          />
+          <Row label="נזקי צנרת עלות ביקור" value={ins.pipeDamageVisitCost} />
+          <Row label="ניתן אינסטלטור פרטי" value={ins.privatePlumber} />
           <Row label="השתתפות עצמית" value={ins.deductible} />
           <Row label="עלות ביקור" value={ins.visitCost} />
-        </AccordionSection>
-      )}
-
-      {hasData(keys) && (
-        <AccordionSection title="מפתחות" icon="🔑">
-          <Row label="מפתח לגג" value={keys.roofKey} />
-          <Row label="מפתח למקלט" value={keys.shelterKey} />
-          <Row label="מפתח לחניה/מחסום" value={keys.parkingKey} />
-          <Row label="מפתח לתיבת דואר" value={keys.mailboxKey} />
-          <Row label="מפתח לשער נגרר" value={keys.gateKey} />
-          <Row label="מפתח לחדר גז" value={keys.gasRoomKey} />
-          <Row label="מפתח לחדר מעלית" value={keys.elevatorRoomKey} />
-          <Row label="מפתח לתיבת ועד" value={keys.committeeBoxKey} />
-          <Row label="מיקום ספייר מפתחות" value={keys.spareKeysLocation} />
-          <Row label="מספר ספייר מפתחות" value={keys.spareKeysCount} />
         </AccordionSection>
       )}
 
       {hasData(comm) && (
         <AccordionSection title="ועד הבית" icon="🏛️">
           <Row label="מיקום תיבת ועד" value={comm.boxLocation} />
+          <Row label="מיקום הנחת צ'קים" value={comm.checksPlacementLocation} />
           <Row label="שיטת חלוקת דמי ועד" value={comm.feeDistribution} />
           <Row label="תהליך קבלת צ'ק" value={comm.checkProcess} />
           <Row label="מספר חתימות על צ'ק" value={comm.signaturesRequired} />
@@ -394,6 +414,18 @@ export default function BuildingDetail() {
         <AccordionSection title="עירייה" icon="🏙️">
           <Row label="פרטי רשומה" value={muni.registrationDetails} />
           <Row label="מספר רשומה" value={muni.registrationNumber} />
+          <Row label="ימי הוצאת חפצים" value={muni.itemRemovalDays} />
+          <Row label="ימי פינוי גזם" value={muni.pruningRemovalDays} />
+          <Row label="תחנת תברואה שם" value={muni.sanitationStationName} />
+          <Row label="תחנת תברואה טלפון" value={muni.sanitationStationPhone} />
+        </AccordionSection>
+      )}
+
+      {hasData(cult) && (
+        <AccordionSection title="האגודה לתרבות הדיור" icon="🏘️">
+          <Row label="שם נציג" value={cult.representativeName} />
+          <Row label="טלפון נציג" value={cult.representativePhone} />
+          <Row label="מנוי לבניין" value={cult.hasSubscription} />
         </AccordionSection>
       )}
 

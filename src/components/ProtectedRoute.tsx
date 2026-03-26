@@ -7,6 +7,9 @@ export default function ProtectedRoute({
   children: React.ReactNode;
 }) {
   const user = useAuthStore((s) => s.user);
-  if (!user) return <Navigate to="/login" replace />;
-  return <>{children}</>;
+  const loading = useAuthStore((s) => s.loading);
+
+  if (loading) return null; // App.tsx כבר מציג spinner
+
+  return user ? <>{children}</> : <Navigate to="/login" replace />;
 }

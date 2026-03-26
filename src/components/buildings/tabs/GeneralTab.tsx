@@ -19,8 +19,13 @@ const Field = ({ label, value, onChange, type = "text" }: any) => (
 
 export default function GeneralTab({ data, onChange }: Props) {
   const g = data.general || {};
+  const keys = data.keys || {};
+
   const updateGeneral = (key: string, v: string) =>
     onChange({ general: { ...g, [key]: v } });
+
+  const updateKeys = (key: string, v: string) =>
+    onChange({ keys: { ...keys, [key]: v } });
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -28,6 +33,12 @@ export default function GeneralTab({ data, onChange }: Props) {
         label="כתובת הבניין"
         value={data.address}
         onChange={(v: string) => onChange({ address: v })}
+      />
+
+      <Field
+        label="מנהל לקוח (בניין)"
+        value={g.clientManager}
+        onChange={(v: string) => updateGeneral("clientManager", v)}
       />
       <Field
         label="מספר דירות"
@@ -47,11 +58,6 @@ export default function GeneralTab({ data, onChange }: Props) {
         onChange={(v: string) => updateGeneral("shops", v)}
       />
       <Field
-        label="קוד כניסה"
-        value={data.entryCode}
-        onChange={(v: string) => onChange({ entryCode: v })}
-      />
-      <Field
         label="תחילת הסכם"
         type="date"
         value={data.contractStart}
@@ -63,7 +69,7 @@ export default function GeneralTab({ data, onChange }: Props) {
         onChange={(v: string) => updateGeneral("toolboxLocation", v)}
       />
       <Field
-        label="מיקום ועד תיבה"
+        label="מיקום תיבת ועד"
         value={g.committeeBoxLocation}
         onChange={(v: string) => updateGeneral("committeeBoxLocation", v)}
       />
@@ -76,16 +82,6 @@ export default function GeneralTab({ data, onChange }: Props) {
         label="מיקום סולם"
         value={g.ladderLocation}
         onChange={(v: string) => updateGeneral("ladderLocation", v)}
-      />
-      <Field
-        label="שיבר מרכזי"
-        value={g.mainShiver}
-        onChange={(v: string) => updateGeneral("mainShiver", v)}
-      />
-      <Field
-        label="לוח חשמל ראשי"
-        value={g.mainElectricPanel}
-        onChange={(v: string) => updateGeneral("mainElectricPanel", v)}
       />
       <Field
         label="אחראי צ'קים לספקים"
@@ -107,11 +103,36 @@ export default function GeneralTab({ data, onChange }: Props) {
         value={g.helperCleaner}
         onChange={(v: string) => updateGeneral("helperCleaner", v)}
       />
+
+      {/* מפתחות — שדות שנשארו */}
       <Field
-        label="מנהל לקוח (בניין)"
-        value={g.clientManager}
-        onChange={(v: string) => updateGeneral("clientManager", v)}
+        label="מפתח לתיבת ועד"
+        value={keys.mailboxKey}
+        onChange={(v: string) => updateKeys("mailboxKey", v)}
       />
+      <Field
+        label="מיקום ספייר מפתחות"
+        value={keys.spareKeysLocation}
+        onChange={(v: string) => updateKeys("spareKeysLocation", v)}
+      />
+      <Field
+        label="מספר ספייר מפתחות"
+        value={keys.spareKeysCount}
+        onChange={(v: string) => updateKeys("spareKeysCount", v)}
+      />
+
+      <div className="md:col-span-2 flex flex-col gap-1">
+        <label className="text-sm font-medium text-gray-600">
+          הערות מיוחדות לבניין
+        </label>
+        <textarea
+          value={data.specialNotes || ""}
+          onChange={(e) => onChange({ specialNotes: e.target.value })}
+          rows={3}
+          className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+          placeholder="הערות מיוחדות..."
+        />
+      </div>
     </div>
   );
 }

@@ -53,7 +53,6 @@ export default function BankInsuranceTab({
         <Field label="מייל סוכנות" {...f("insurance", ins, "agencyEmail")} />
         <Field label="מספר פוליסה" {...f("insurance", ins, "policyNumber")} />
         <Field label="מספר לקוח" {...f("insurance", ins, "clientNumber")} />
-        <Field label="אמצעי תשלום" {...f("insurance", ins, "paymentMethod")} />
         <Field
           label="ביטוח נזקי צנרת – ספק"
           {...f("insurance", ins, "pipeDamageProvider")}
@@ -61,6 +60,18 @@ export default function BankInsuranceTab({
         <Field
           label="ביטוח נזקי צנרת – טלפון"
           {...f("insurance", ins, "pipeDamagePhone")}
+        />
+        <Field
+          label="נזקי צנרת השתתפות עצמית"
+          {...f("insurance", ins, "pipeDamageDeductible")}
+        />
+        <Field
+          label="נזקי צנרת עלות ביקור"
+          {...f("insurance", ins, "pipeDamageVisitCost")}
+        />
+        <Field
+          label="ניתן אינסטלטור פרטי"
+          {...f("insurance", ins, "privatePlumber")}
         />
         <Field label="השתתפות עצמית" {...f("insurance", ins, "deductible")} />
         <Field label="עלות ביקור" {...f("insurance", ins, "visitCost")} />

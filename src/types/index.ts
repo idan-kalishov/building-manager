@@ -53,6 +53,7 @@ export interface Building {
   entryCode?: string;
   contractStart?: string;
   notes?: string;
+  specialNotes?: string; // ← חדש
   general?: Record<string, any>;
   technical?: Record<string, any>;
   intercom?: Record<string, any>;
@@ -73,8 +74,10 @@ export interface Building {
   security?: Record<string, any>;
   airConditioning?: Record<string, any>;
   shelter?: Record<string, any>;
+  gates?: Record<string, any>;
   municipality?: Record<string, any>;
   committee?: Record<string, any>;
+  culturalAssociation?: Record<string, any>; // ← חדש
   customSections?: {
     id: string;
     title: string;

@@ -25,6 +25,9 @@ export default function SuppliersTab({
   const clean = data.cleaning || {};
   const gard = data.gardening || {};
   const comm = data.committee || {};
+  const lights = data.lights || {};
+  const muni = data.municipality || {};
+  const cult = data.culturalAssociation || {};
 
   const f = (section: string, obj: any, key: string) => ({
     value: obj[key],
@@ -37,7 +40,14 @@ export default function SuppliersTab({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Field label="שם מנקה" {...f("cleaning", clean, "name")} />
         <Field label="טלפון מנקה" {...f("cleaning", clean, "phone")} />
-        <Field label="ז.ת מנקה" {...f("cleaning", clean, "idNumber")} />
+        <Field
+          label="מנקה מוציא חשבוניות"
+          {...f("cleaning", clean, "hasInvoices")}
+        />
+        <Field
+          label="מנקה ביטוח לאומי – פנקס"
+          {...f("cleaning", clean, "nationalInsuranceBooklet")}
+        />
         <Field
           label="מספר פעמים בשבוע"
           {...f("cleaning", clean, "weeklyFrequency")}
@@ -51,24 +61,42 @@ export default function SuppliersTab({
           label="ניקוי חדר מדרגות"
           {...f("cleaning", clean, "stairsDays")}
         />
+        <Field label="מפיצי ריח" {...f("cleaning", clean, "airFreshener")} />
+        <Field
+          label="מפיצי ריח מיקום"
+          {...f("cleaning", clean, "airFreshenerLocation")}
+        />
         <Field label="דגשים בניקיון" {...f("cleaning", clean, "notes")} />
-        <Field label="דגם לובי" {...f("cleaning", clean, "lobbyModel")} />
-        <Field label="צבע לובי" {...f("cleaning", clean, "lobbyColor")} />
+      </div>
+
+      <Section title="💡 נורות ותאורה" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Field label="נורות כללי" {...f("lights", lights, "general")} />
         <Field
-          label="דגם מסדרונות"
-          {...f("cleaning", clean, "corridorModel")}
+          label="מיקום נורות ספייר"
+          {...f("lights", lights, "spareLocation")}
+        />
+        <Field label="לובי – דגם" {...f("lights", lights, "lobbyModel")} />
+        <Field label="לובי – צבע" {...f("lights", lights, "lobbyColor")} />
+        <Field
+          label="מסדרונות – דגם"
+          {...f("lights", lights, "corridorModel")}
         />
         <Field
-          label="צבע מסדרונות"
-          {...f("cleaning", clean, "corridorColor")}
+          label="מסדרונות – צבע"
+          {...f("lights", lights, "corridorColor")}
         />
         <Field
-          label="דגם חדר מדרגות"
-          {...f("cleaning", clean, "stairsModel")}
+          label="חדר מדרגות – דגם"
+          {...f("lights", lights, "stairsModel")}
         />
         <Field
-          label="צבע חדר מדרגות"
-          {...f("cleaning", clean, "stairsColor")}
+          label="חדר מדרגות – צבע"
+          {...f("lights", lights, "stairsColor")}
+        />
+        <Field
+          label="מפיצי ריח – מספר סידורי"
+          {...f("lights", lights, "airFreshenerSerial")}
         />
       </div>
 
@@ -93,16 +121,12 @@ export default function SuppliersTab({
           {...f("gardening", gard, "irrigationLocation")}
         />
         <Field
+          label="מיקום צינור השקייה"
+          {...f("gardening", gard, "irrigationPipeLocation")}
+        />
+        <Field
           label="מיקום שיבר הגינה"
           {...f("gardening", gard, "gardenShiverLocation")}
-        />
-        <Field
-          label="ימי הוצאת גזם"
-          {...f("gardening", gard, "trimmingDays")}
-        />
-        <Field
-          label="טלפון איסוף גזם"
-          {...f("gardening", gard, "trimmingPickupPhone")}
         />
       </div>
 
@@ -111,6 +135,10 @@ export default function SuppliersTab({
         <Field
           label="מיקום תיבת ועד"
           {...f("committee", comm, "boxLocation")}
+        />
+        <Field
+          label="מיקום הנחת צ'קים"
+          {...f("committee", comm, "checksPlacementLocation")}
         />
         <Field
           label="שיטת חלוקת דמי ועד"
@@ -123,6 +151,50 @@ export default function SuppliersTab({
         <Field
           label="מספר חתימות על צ'ק"
           {...f("committee", comm, "signaturesRequired")}
+        />
+      </div>
+
+      <Section title="🏙️ עירייה" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Field
+          label="פרטי רשומה"
+          {...f("municipality", muni, "registrationDetails")}
+        />
+        <Field
+          label="מספר רשומה"
+          {...f("municipality", muni, "registrationNumber")}
+        />
+        <Field
+          label="ימי הוצאת חפצים"
+          {...f("municipality", muni, "itemRemovalDays")}
+        />
+        <Field
+          label="ימי פינוי גזם"
+          {...f("municipality", muni, "pruningRemovalDays")}
+        />
+        <Field
+          label="תחנת תברואה שם"
+          {...f("municipality", muni, "sanitationStationName")}
+        />
+        <Field
+          label="תחנת תברואה טלפון"
+          {...f("municipality", muni, "sanitationStationPhone")}
+        />
+      </div>
+
+      <Section title="🏘️ האגודה לתרבות הדיור" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <Field
+          label="שם נציג"
+          {...f("culturalAssociation", cult, "representativeName")}
+        />
+        <Field
+          label="טלפון נציג"
+          {...f("culturalAssociation", cult, "representativePhone")}
+        />
+        <Field
+          label="מנוי לבניין"
+          {...f("culturalAssociation", cult, "hasSubscription")}
         />
       </div>
     </div>

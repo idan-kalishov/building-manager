@@ -27,7 +27,7 @@ export default function TechnicalTab({
   const elev = data.elevator || {};
   const roof = data.roof || {};
   const gas = data.gas || {};
-  const park = data.parking || {};
+  const gates = data.gates || {};
   const water = data.water || {};
   const fire = data.firefighting || {};
   const shelter = data.shelter || {};
@@ -76,6 +76,10 @@ export default function TechnicalTab({
           {...f("electricity", elec, "mainPanelLocation")}
         />
         <Field
+          label="מיקום נקודת חשמל"
+          {...f("electricity", elec, "powerOutletLocation")}
+        />
+        <Field
           label="צורת תשלום"
           {...f("electricity", elec, "paymentMethod")}
         />
@@ -92,6 +96,7 @@ export default function TechnicalTab({
       <Section title="🛗 מעלית" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Field label="מספר מעליות" {...f("elevator", elev, "count")} />
+        <Field label="מספר תחנות" {...f("elevator", elev, "stationsCount")} />
         <Field label="סוג מעלית" {...f("elevator", elev, "type")} />
         <Field label="חברת מעליות" {...f("elevator", elev, "company")} />
         <Field label="טלפון חברה" {...f("elevator", elev, "companyPhone")} />
@@ -101,6 +106,12 @@ export default function TechnicalTab({
           label="עלות קריאת שרות"
           {...f("elevator", elev, "serviceCallCost")}
         />
+        <Field label="ביטוח חלפים" {...f("elevator", elev, "partsInsurance")} />
+        <Field label="ספק הטלפון" {...f("elevator", elev, "phoneProvider")} />
+        <Field
+          label="על שם מי קו הטלפון"
+          {...f("elevator", elev, "phoneLineOwner")}
+        />
         <Field
           label="מספר קו הטלפון"
           {...f("elevator", elev, "phoneLineNumber")}
@@ -109,7 +120,11 @@ export default function TechnicalTab({
           label="מיקום חדר מעלית"
           {...f("elevator", elev, "roomLocation")}
         />
-        <Field label="צורת תשלום" {...f("elevator", elev, "paymentMethod")} />
+        <Field label="מפתח לחדר מעלית" {...f("elevator", elev, "roomKey")} />
+        <Field
+          label="צורת תשלום לחברת המעליות"
+          {...f("elevator", elev, "paymentMethod")}
+        />
       </div>
 
       <Section title="🏠 גג" />
@@ -128,10 +143,10 @@ export default function TechnicalTab({
         <Field label="ספק גז" {...f("gas", gas, "supplier")} />
         <Field label="טלפון ספק" {...f("gas", gas, "supplierPhone")} />
         <Field label="טלפון חירום" {...f("gas", gas, "emergencyPhone")} />
-        <Field label="סוג מיכלי גז" {...f("gas", gas, "tankType")} />
+        <Field label="צובר גז" {...f("gas", gas, "tankExists")} />
+        <Field label="מיקום צובר גז" {...f("gas", gas, "tankLocation")} />
         <Field label="מיקום שעוני גז" {...f("gas", gas, "metersLocation")} />
         <Field label="מיקום בלוני גז" {...f("gas", gas, "cylindersLocation")} />
-        <Field label="עלות לקוב" {...f("gas", gas, "costPerCubic")} />
         <Field label="מפתח לחדר גז" {...f("gas", gas, "roomKey")} />
         <Field
           label="מספר מרכזיה בחב׳ הגז"
@@ -139,29 +154,33 @@ export default function TechnicalTab({
         />
       </div>
 
-      <Section title="🅿️ חניה" />
+      <Section title="🚪 שערים" />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Field label="חברת חניה" {...f("parking", park, "company")} />
-        <Field label="טלפון חברה" {...f("parking", park, "companyPhone")} />
+        <Field label="שם חברת שערים" {...f("gates", gates, "company")} />
+        <Field label="טלפון חברה" {...f("gates", gates, "companyPhone")} />
+        <Field
+          label="שם אפליקציה לפתיחת שער"
+          {...f("gates", gates, "appName")}
+        />
         <Field
           label="מיקום מפתח שער נגרר"
-          {...f("parking", park, "gateKeyLocation")}
+          {...f("gates", gates, "gateKeyLocation")}
         />
         <Field
           label="מיקום מפתח מחסום"
-          {...f("parking", park, "barrierKeyLocation")}
+          {...f("gates", gates, "barrierKeyLocation")}
         />
         <Field
           label="איך פותחים שער"
-          {...f("parking", park, "gateOpenMethod")}
+          {...f("gates", gates, "gateOpenMethod")}
         />
         <Field
           label="מיקום שלט מחסום"
-          {...f("parking", park, "remoteLocation")}
+          {...f("gates", gates, "remoteLocation")}
         />
         <Field
           label="פתיחה סלולרית – מספר"
-          {...f("parking", park, "mobileOpenNumber")}
+          {...f("gates", gates, "mobileOpenNumber")}
         />
       </div>
 
@@ -183,6 +202,10 @@ export default function TechnicalTab({
           {...f("water", water, "privateMetersLocation")}
         />
         <Field label="מיקום ברז מים" {...f("water", water, "tapLocation")} />
+        <Field
+          label="מיקום שיבר מרכזי"
+          {...f("water", water, "mainShiverLocation")}
+        />
       </div>
 
       <Section title="🧯 כיבוי אש" />

@@ -17,14 +17,7 @@ export default function KeysTab({ data, onChange }: any) {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <Field label="מפתח לגג" {...f("roofKey")} />
-      <Field label="מפתח למקלט" {...f("shelterKey")} />
-      <Field label="מפתח לחניה/מחסום" {...f("parkingKey")} />
-      <Field label="מפתח לתיבת דואר" {...f("mailboxKey")} />
-      <Field label="מפתח לשער נגרר" {...f("gateKey")} />
-      <Field label="מפתח לחדר גז" {...f("gasRoomKey")} />
-      <Field label="מפתח לחדר מעלית" {...f("elevatorRoomKey")} />
-      <Field label="מפתח לתיבת ועד" {...f("committeeBoxKey")} />
+      <Field label="מפתח לתיבת ועד" {...f("mailboxKey")} />
       <Field label="מיקום ספייר מפתחות" {...f("spareKeysLocation")} />
       <Field label="מספר ספייר מפתחות לדיירים" {...f("spareKeysCount")} />
     </div>

@@ -13,11 +13,24 @@ import BuildingDetail from "./pages/BuildingDetail";
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
+  const setLoading = useAuthStore((s) => s.setLoading);
+  const loading = useAuthStore((s) => s.loading);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, setUser);
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
     return unsub;
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-400 text-lg">
+        טוען...
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>
@@ -34,7 +47,6 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="buildings" element={<Buildings />} />
           <Route path="buildings/:id" element={<BuildingDetail />} />
-
           <Route path="leads" element={<Leads />} />
         </Route>
       </Routes>

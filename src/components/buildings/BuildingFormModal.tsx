@@ -2,18 +2,20 @@ import { useState } from "react";
 import { addBuilding, updateBuilding } from "../../lib/buildings.service";
 import type { Building } from "../../types";
 import GeneralTab from "./tabs/GeneralTab";
-import TechnicalTab from "./tabs/TechnicalTab";
+import InfrastructureTab from "./tabs/InfrastructureTab";
+import SystemsTab from "./tabs/SystemsTab";
 import SuppliersTab from "./tabs/SuppliersTab";
 import BankInsuranceTab from "./tabs/BankInsuranceTab";
-import KeysTab from "./tabs/KeysTab";
+import CommitteeTab from "./tabs/CommitteeTab";
 import NotesTab from "./tabs/NotesTab";
 
 const TABS = [
   { id: "general", label: "כללי" },
-  { id: "technical", label: "טכני" },
+  { id: "infrastructure", label: "תשתיות" },
+  { id: "systems", label: "ציוד ומערכות" },
   { id: "suppliers", label: "ספקים" },
   { id: "bank", label: "בנק וביטוח" },
-  { id: "keys", label: "מפתחות" },
+  { id: "committee", label: "ועד ועירייה" },
   { id: "notes", label: "הערות" },
 ];
 
@@ -63,7 +65,7 @@ export default function BuildingFormModal({ building, onClose }: Props) {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b">
+        <div className="flex border-b overflow-x-auto">
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -90,8 +92,14 @@ export default function BuildingFormModal({ building, onClose }: Props) {
               }
             />
           )}
-          {activeTab === "technical" && (
-            <TechnicalTab
+          {activeTab === "infrastructure" && (
+            <InfrastructureTab
+              data={data}
+              onChange={(section: keyof Building, v: any) => update(section, v)}
+            />
+          )}
+          {activeTab === "systems" && (
+            <SystemsTab
               data={data}
               onChange={(section: keyof Building, v: any) => update(section, v)}
             />
@@ -108,10 +116,10 @@ export default function BuildingFormModal({ building, onClose }: Props) {
               onChange={(section: keyof Building, v: any) => update(section, v)}
             />
           )}
-          {activeTab === "keys" && (
-            <KeysTab
-              data={data.keys || {}}
-              onChange={(v: any) => update("keys", v)}
+          {activeTab === "committee" && (
+            <CommitteeTab
+              data={data}
+              onChange={(section: keyof Building, v: any) => update(section, v)}
             />
           )}
           {activeTab === "notes" && (
