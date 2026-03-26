@@ -138,18 +138,18 @@ export default function BuildingDetail() {
           </div>
         </div>
 
-        <div className="flex gap-2 flex-shrink-0">
-          <button
-            onClick={() => exportBuildingsToExcel([building])}
-            className="flex items-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 font-semibold text-sm"
-          >
-            📊 ייצוא לאקסל
-          </button>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <button
             onClick={() => setShowEdit(true)}
-            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+            className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium w-full"
           >
             ✏️ עריכה
+          </button>
+          <button
+            onClick={() => exportBuildingsToExcel([building])}
+            className="flex items-center justify-center gap-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 font-semibold text-sm w-full"
+          >
+            📊 אקסל
           </button>
         </div>
       </div>
