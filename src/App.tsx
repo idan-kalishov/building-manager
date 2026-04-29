@@ -10,6 +10,7 @@ import Leads from "./pages/Leads";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import BuildingDetail from "./pages/BuildingDetail";
+import ContactsImport from "./pages/ContactsImport";
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -48,6 +49,7 @@ export default function App() {
           <Route path="buildings" element={<Buildings />} />
           <Route path="buildings/:id" element={<BuildingDetail />} />
           <Route path="leads" element={<Leads />} />
+          <Route path="contacts-import" element={<ContactsImport />} />
         </Route>
       </Routes>
     </BrowserRouter>
