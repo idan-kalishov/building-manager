@@ -73,10 +73,10 @@ function parsePhone(raw: string | number | undefined): string {
 }
 
 function toGmailCSV(contacts: ParsedContact[]): string {
-  const header = "Name,Phone 1 - Value\n";
+  const header = "Name,Phone 1 - Value,Phone 1 - Type\n";
   const rows = contacts
     .filter((c) => c.phone)
-    .map((c) => `"${c.displayName.replace(/"/g, '""')}","${c.phone}"`)
+    .map((c) => `"${c.displayName.replace(/"/g, '""')}","${c.phone}","Mobile"`)
     .join("\n");
   return header + rows;
 }
