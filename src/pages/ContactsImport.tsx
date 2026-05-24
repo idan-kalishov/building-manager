@@ -73,7 +73,7 @@ function parsePhone(raw: string | number | undefined): string {
 }
 
 function toGmailCSV(contacts: ParsedContact[]): string {
-  const header = "First Name,Phone 1 - Value\n";
+  const header = "Name,Phone 1 - Value\n";
   const rows = contacts
     .filter((c) => c.phone)
     .map((c) => `"${c.displayName.replace(/"/g, '""')}","${c.phone}"`)
@@ -82,8 +82,7 @@ function toGmailCSV(contacts: ParsedContact[]): string {
 }
 
 function downloadCSV(content: string, filename: string) {
-  const bom = "\uFEFF";
-  const blob = new Blob([bom + content], { type: "text/csv;charset=utf-8;" });
+  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

@@ -196,7 +196,6 @@ export default function Leads() {
           <span>• סה"כ לידים</span>
         </div>
       </div>
-
       {/* ===== FILTERS + ADD ===== */}
       <div className="flex gap-2 flex-wrap flex-shrink-0">
         <input
@@ -222,7 +221,6 @@ export default function Leads() {
           + ליד חדש
         </button>
       </div>
-
       {/* ===== KANBAN BOARD ===== */}
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-3 overflow-x-auto pb-4 flex-1 items-start">
@@ -396,7 +394,6 @@ export default function Leads() {
           })}
         </div>
       </DragDropContext>
-
       {showForm && (
         <LeadFormModal
           lead={editing}
@@ -404,7 +401,6 @@ export default function Leads() {
           onClose={() => setShowForm(false)}
         />
       )}
-
       {showDetail && viewing && (
         <LeadDetailModal
           lead={viewing}
