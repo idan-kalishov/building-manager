@@ -73,6 +73,7 @@ function parsePhone(raw: string | number | undefined): string {
 }
 
 function toGmailCSV(contacts: ParsedContact[]): string {
+<<<<<<< HEAD
   // Google Contacts expects specific column names
   // Using "Given Name" and "Phone 1 - Value" format
   const header = "Given Name,Phone 1 - Value,Phone 1 - Type\n";
@@ -85,6 +86,12 @@ function toGmailCSV(contacts: ParsedContact[]): string {
       const cleanPhone = c.phone.replace(/[^\d+]/g, "");
       return `"${escapedName}","${cleanPhone}","Mobile"`;
     })
+=======
+  const header = "Name,Phone 1 - Value,Phone 1 - Type\n";
+  const rows = contacts
+    .filter((c) => c.phone)
+    .map((c) => `"${c.displayName.replace(/"/g, '""')}","${c.phone}","Mobile"`)
+>>>>>>> fca747ee3617dd3c86bfb41eaca36e8f6efea17e
     .join("\n");
   return header + rows;
 }
