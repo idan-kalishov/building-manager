@@ -1,40 +1,43 @@
 interface ConfirmModalProps {
   title: string;
-  message: string;
-  confirmLabel: string;
-  confirmColor: string;
+  message?: string;
+  confirmLabel?: string;
+  confirmColor?: string;
   onConfirm: () => void;
   onCancel: () => void;
+  children?: React.ReactNode;
 }
 
 export default function ConfirmModal({
   title,
   message,
-  confirmLabel,
-  confirmColor,
+  confirmLabel = "אישור",
+  confirmColor = "bg-red-500 hover:bg-red-600",
   onConfirm,
   onCancel,
+  children,
 }: ConfirmModalProps) {
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-[60] flex items-end md:items-center justify-center p-4"
       dir="rtl"
     >
-      <div className="bg-white rounded-2xl w-full max-w-sm">
+      <div className="bg-white rounded-2xl w-full max-w-sm shadow-xl">
         <div className="p-6">
-          <h3 className="text-lg font-bold mb-2">{title}</h3>
-          <p className="text-gray-600 text-sm break-words">{message}</p>
+          <h3 className="text-lg font-bold text-gray-800 mb-2">{title}</h3>
+          {message && <p className="text-sm text-gray-500">{message}</p>}
+          {children}
         </div>
-        <div className="flex gap-2 p-4 border-t">
+        <div className="flex gap-2 px-4 pb-4">
           <button
             onClick={onConfirm}
-            className={`flex-1 ${confirmColor} text-white py-2 rounded-lg font-medium`}
+            className={`flex-1 ${confirmColor} text-white py-3 rounded-xl font-semibold text-sm transition-colors`}
           >
             {confirmLabel}
           </button>
           <button
             onClick={onCancel}
-            className="flex-1 border py-2 rounded-lg hover:bg-gray-50 text-gray-600"
+            className="flex-1 border border-gray-300 text-gray-600 py-3 rounded-xl font-semibold text-sm hover:bg-gray-50"
           >
             ביטול
           </button>
