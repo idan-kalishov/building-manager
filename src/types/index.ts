@@ -8,6 +8,16 @@ export type LeadStatus =
 export type LeadPriority = "high" | "medium" | "low";
 
 export type TaskPriority = "high" | "medium" | "low";
+export type Technician = "גדי" | "עידן" | "אחר";
+
+export interface TaskUpdate {
+  id: string;
+  technician: Technician;
+  message: string;
+  timestamp: string; // ISO date string
+  oldDueDate?: string; // optional - if due date was changed
+  newDueDate?: string;
+}
 
 export interface Task {
   id?: string;
@@ -18,6 +28,7 @@ export interface Task {
   priority?: TaskPriority;
   done?: boolean;
   createdAt?: any;
+  updates?: TaskUpdate[]; // stackable updates log
 }
 
 export interface Lead {
@@ -53,7 +64,7 @@ export interface Building {
   entryCode?: string;
   contractStart?: string;
   notes?: string;
-  specialNotes?: string; // ← חדש
+  specialNotes?: string;
   general?: Record<string, any>;
   technical?: Record<string, any>;
   intercom?: Record<string, any>;
@@ -77,7 +88,7 @@ export interface Building {
   gates?: Record<string, any>;
   municipality?: Record<string, any>;
   committee?: Record<string, any>;
-  culturalAssociation?: Record<string, any>; // ← חדש
+  culturalAssociation?: Record<string, any>;
   customSections?: {
     id: string;
     title: string;

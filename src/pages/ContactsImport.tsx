@@ -72,33 +72,6 @@ function parsePhone(raw: string | number | undefined): string {
   return s.replace(/-/g, "");
 }
 
-function toGmailCSV(contacts: ParsedContact[]): string {
-  // Google Contacts expects specific column names
-  // Using "Given Name" and "Phone 1 - Value" format
-  const header = "Given Name,Phone 1 - Value,Phone 1 - Type\n";
-  const rows = contacts
-    .filter((c) => c.phone)
-    .map((c) => {
-      // Escape quotes in display name
-      const escapedName = c.displayName.replace(/"/g, '""');
-      // Ensure phone is properly formatted
-      const cleanPhone = c.phone.replace(/[^\d+]/g, "");
-      return `"${escapedName}","${cleanPhone}","Mobile"`;
-    })
-    .join("\n");
-  return header + rows;
-}
-
-function downloadCSV(content: string, filename: string) {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 export default function ContactsImport() {
   const [contacts, setContacts] = useState<ParsedContact[]>([]);
   const [fileName, setFileName] = useState("");
@@ -190,9 +163,66 @@ export default function ContactsImport() {
   }, []);
 
   const handleDownload = () => {
-    const csv = toGmailCSV(contacts);
+    // Use the full Google Contacts canonical CSV schema.
+    // Without these columns Google cannot map phone fields and dumps them as notes.
+    const googleData = contacts.map((c) => {
+      const finalPhone =
+        c.phone.startsWith("5") && c.phone.length === 9
+          ? "0" + c.phone
+          : c.phone;
+
+      return {
+        Name: c.displayName,
+        "Given Name": "",
+        "Additional Name": "",
+        "Family Name": "",
+        "Yomi Name": "",
+        "Given Name Yomi": "",
+        "Additional Name Yomi": "",
+        "Family Name Yomi": "",
+        "Name Prefix": "",
+        "Name Suffix": "",
+        Initials: "",
+        Nickname: "",
+        "Short Name": "",
+        "Maiden Name": "",
+        Birthday: "",
+        Gender: "",
+        Location: "",
+        "Billing Information": "",
+        "Directory Server": "",
+        Mileage: "",
+        Occupation: "",
+        Hobby: "",
+        Sensitivity: "",
+        Priority: "",
+        Subject: "",
+        Notes: "",
+        Language: "",
+        Photo: "",
+        "Group Membership": "",
+        "Phone 1 - Value": finalPhone,
+        "Phone 1 - Type": "Mobile",
+        "Phone 1 - Label": "",
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(googleData);
+    const csvContent = XLSX.utils.sheet_to_csv(worksheet);
+
+    // UTF-8 BOM so Google reads Hebrew names correctly
+    const BOM = "\ufeff";
+    const blob = new Blob([BOM + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+
     const base = fileName.replace(/\.[^.]+$/, "") || "contacts";
-    downloadCSV(csv, `${base}_gmail.csv`);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${base}_gmail.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
