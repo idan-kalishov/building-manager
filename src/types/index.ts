@@ -14,8 +14,8 @@ export interface TaskUpdate {
   id: string;
   technician: Technician;
   message: string;
-  timestamp: string; // ISO date string
-  oldDueDate?: string; // optional - if due date was changed
+  timestamp: string;
+  oldDueDate?: string;
   newDueDate?: string;
 }
 
@@ -28,7 +28,7 @@ export interface Task {
   priority?: TaskPriority;
   done?: boolean;
   createdAt?: any;
-  updates?: TaskUpdate[]; // stackable updates log
+  updates?: TaskUpdate[];
 }
 
 export interface Lead {
@@ -54,6 +54,17 @@ export interface Lead {
   createdAt?: any;
   updatedAt?: any;
   customFields?: { id: string; label: string; value: string }[];
+}
+
+export interface GlobalCustomField {
+  id: string;
+  label: string;
+}
+
+export interface GlobalCustomSection {
+  id: string;
+  title: string;
+  fields: GlobalCustomField[];
 }
 
 export interface Building {
@@ -89,9 +100,15 @@ export interface Building {
   municipality?: Record<string, any>;
   committee?: Record<string, any>;
   culturalAssociation?: Record<string, any>;
+  /** @deprecated use customSectionValues instead */
   customSections?: {
     id: string;
     title: string;
     fields: { id: string; label: string; value: string }[];
   }[];
+  /**
+   * Per-building field values for global custom sections.
+   * customSectionValues[sectionId][fieldId] = value
+   */
+  customSectionValues?: Record<string, Record<string, string>>;
 }
