@@ -31,6 +31,13 @@ export interface Task {
   updates?: TaskUpdate[];
 }
 
+export interface LeadNote {
+  id: string;
+  timestamp: string;
+  author: string;
+  message: string;
+}
+
 export interface Lead {
   id?: string;
   address?: string;
@@ -51,6 +58,7 @@ export interface Lead {
   priority?: LeadPriority;
   order?: number;
   notes?: string;
+  notesList?: LeadNote[];
   createdAt?: any;
   updatedAt?: any;
   customFields?: { id: string; label: string; value: string }[];

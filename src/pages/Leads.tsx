@@ -15,6 +15,7 @@ import { useLeadsStore } from "../store/leadsStore";
 import type { Lead, LeadStatus, LeadPriority } from "../types";
 import LeadFormModal from "../components/leads/LeadFormModal";
 import LeadDetailModal from "../components/leads/LeadDetailModal";
+import LeadNotesModal from "../components/leads/LeadNotesModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -108,10 +109,7 @@ const PRIORITY_LABEL: Record<LeadPriority, string> = {
   low: "🟢 נמוכה",
 };
 
-// Priority sort weight: high comes first when sorting asc
 const PRIORITY_WEIGHT: Record<string, number> = { high: 3, medium: 2, low: 1 };
-
-// Status sort order
 const STATUS_ORDER: Record<string, number> = {
   new: 1,
   contacted: 2,
@@ -147,9 +145,7 @@ function isOverdue(dateStr?: string) {
 function sortLeads(leads: Lead[], key: SortKey, dir: SortDir): Lead[] {
   if (!key) return leads;
   return [...leads].sort((a, b) => {
-    let aVal: any;
-    let bVal: any;
-
+    let aVal: any, bVal: any;
     if (key === "priority") {
       aVal = PRIORITY_WEIGHT[a.priority ?? ""] ?? 0;
       bVal = PRIORITY_WEIGHT[b.priority ?? ""] ?? 0;
@@ -157,7 +153,6 @@ function sortLeads(leads: Lead[], key: SortKey, dir: SortDir): Lead[] {
       aVal = STATUS_ORDER[a.status ?? ""] ?? 99;
       bVal = STATUS_ORDER[b.status ?? ""] ?? 99;
     } else if (key === "followUpDate") {
-      // Empty dates go to the bottom always
       if (!a.followUpDate && !b.followUpDate) return 0;
       if (!a.followUpDate) return 1;
       if (!b.followUpDate) return -1;
@@ -170,31 +165,18 @@ function sortLeads(leads: Lead[], key: SortKey, dir: SortDir): Lead[] {
       aVal = ((a[key] as string) ?? "").toLowerCase();
       bVal = ((b[key] as string) ?? "").toLowerCase();
     }
-
     if (aVal < bVal) return dir === "asc" ? -1 : 1;
     if (aVal > bVal) return dir === "asc" ? 1 : -1;
     return 0;
   });
 }
 
-// ─── Table View ───────────────────────────────────────────────────────────────
-
-interface TableViewProps {
-  leads: Lead[];
-  sortKey: SortKey;
-  sortDir: SortDir;
-  onSort: (key: SortKey) => void;
-  onEdit: (lead: Lead) => void;
-  onView: (lead: Lead) => void;
-  onDelete: (e: React.MouseEvent, id: string) => void;
-}
+// ─── Table column config ──────────────────────────────────────────────────────
 
 interface ColConfig {
   key: SortKey;
   label: string;
-  className?: string;
 }
-
 const TABLE_COLUMNS: ColConfig[] = [
   { key: "address", label: "כתובת" },
   { key: "name", label: "שם ועד" },
@@ -205,17 +187,36 @@ const TABLE_COLUMNS: ColConfig[] = [
   { key: "status", label: "סטטוס" },
   { key: "priority", label: "עדיפות" },
   { key: "followUpDate", label: "מועד מעקב" },
+  { key: null, label: "הערות" },
 ];
 
 function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
-  if (!active) {
-    return <span className="text-gray-300 text-xs mr-1">⇅</span>;
-  }
-  return (
-    <span className="text-blue-500 text-xs mr-1">
+  return active ? (
+    <span className="text-blue-500 text-xs mr-0.5">
       {dir === "asc" ? "↑" : "↓"}
     </span>
+  ) : (
+    <span className="text-gray-300 text-xs mr-0.5">⇅</span>
   );
+}
+
+// ─── Shared action props ──────────────────────────────────────────────────────
+
+interface ActionProps {
+  leads: Lead[];
+  onEdit: (lead: Lead) => void;
+  onView: (lead: Lead) => void;
+  onDelete: (e: React.MouseEvent, id: string) => void;
+  onNotesClick: (lead: Lead) => void;
+}
+
+// ─── Desktop table ────────────────────────────────────────────────────────────
+
+interface TableViewProps extends ActionProps {
+  sortKey: SortKey;
+  sortDir: SortDir;
+  onSort: (key: SortKey) => void;
+  onNotesClick: (lead: Lead) => void;
 }
 
 function LeadTableView({
@@ -226,17 +227,16 @@ function LeadTableView({
   onEdit,
   onView,
   onDelete,
+  onNotesClick,
 }: TableViewProps) {
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
-      <table className="w-full text-sm" dir="rtl">
+      <table className="w-full text-sm min-w-[700px]" dir="rtl">
         <thead>
           <tr className="bg-gray-50 border-b border-gray-200 text-gray-500 text-xs">
-            {/* Row number — not sortable */}
             <th className="px-3 py-3 text-right font-semibold w-8 text-gray-400">
               #
             </th>
-
             {TABLE_COLUMNS.map((col) => (
               <th
                 key={col.key}
@@ -249,8 +249,6 @@ function LeadTableView({
                 </span>
               </th>
             ))}
-
-            {/* Actions — not sortable */}
             <th className="px-3 py-3 text-right font-semibold text-gray-400">
               פעולות
             </th>
@@ -270,7 +268,6 @@ function LeadTableView({
               label: lead.status,
               color: "bg-gray-100 text-gray-600",
             };
-
             return (
               <tr
                 key={lead.id}
@@ -280,29 +277,31 @@ function LeadTableView({
                   ${overdue ? "ring-1 ring-inset ring-red-300" : ""}`}
               >
                 <td className="px-3 py-3 text-gray-400 text-xs">{i + 1}</td>
-
                 <td className="px-3 py-3 font-semibold text-gray-800 max-w-[160px] truncate">
                   {lead.address || "—"}
                 </td>
-
                 <td className="px-3 py-3 text-gray-700">{lead.name || "—"}</td>
-
-                <td className="px-3 py-3 text-gray-600 font-mono text-xs">
-                  {lead.phone || "—"}
+                <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                  {lead.phone ? (
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="flex items-center gap-1 text-green-700 font-mono text-xs bg-green-50 border border-green-200 rounded-lg px-2 py-1 hover:bg-green-100 whitespace-nowrap"
+                    >
+                      📞 {lead.phone}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
                 </td>
-
                 <td className="px-3 py-3 text-gray-500 text-center">
                   {lead.tenantsCount ? `${lead.tenantsCount} 👥` : "—"}
                 </td>
-
                 <td className="px-3 py-3 text-gray-500 max-w-[120px] truncate">
                   {lead.currentCompany || "—"}
                 </td>
-
                 <td className="px-3 py-3 text-gray-700 font-medium">
                   {lead.managementCost ? `₪${lead.managementCost}` : "—"}
                 </td>
-
                 <td className="px-3 py-3">
                   <span
                     className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${status.color}`}
@@ -310,21 +309,34 @@ function LeadTableView({
                     {status.label}
                   </span>
                 </td>
-
                 <td className="px-3 py-3 text-xs whitespace-nowrap">
                   {lead.priority ? PRIORITY_LABEL[lead.priority] : "—"}
                 </td>
-
                 <td
-                  className={`px-3 py-3 text-xs font-medium whitespace-nowrap ${
-                    overdue ? "text-red-600" : "text-gray-500"
-                  }`}
+                  className={`px-3 py-3 text-xs font-medium whitespace-nowrap ${overdue ? "text-red-600" : "text-gray-500"}`}
                 >
                   {lead.followUpDate
                     ? `${overdue ? "⚠️ " : ""}${lead.followUpDate}`
                     : "—"}
                 </td>
-
+                <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                  {(() => {
+                    const count = (lead as any).notesList?.length ?? 0;
+                    return (
+                      <button
+                        onClick={() => onNotesClick(lead)}
+                        title="פתח הערות"
+                        className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium transition-colors ${
+                          count > 0
+                            ? "bg-amber-50 border border-amber-300 text-amber-700 hover:bg-amber-100"
+                            : "bg-gray-50 border border-dashed border-gray-300 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                        }`}
+                      >
+                        📝 {count > 0 ? count : "+"}
+                      </button>
+                    );
+                  })()}
+                </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1">
                     <button
@@ -350,6 +362,123 @@ function LeadTableView({
   );
 }
 
+// ─── Mobile card list ─────────────────────────────────────────────────────────
+
+function LeadMobileList({
+  leads,
+  onEdit,
+  onView,
+  onDelete,
+  onNotesClick,
+}: ActionProps) {
+  if (leads.length === 0) {
+    return (
+      <div className="text-center py-12 text-gray-400">אין לידים להצגה</div>
+    );
+  }
+  return (
+    <div className="space-y-3">
+      {leads.map((lead) => {
+        const overdue = isOverdue(lead.followUpDate);
+        const status = STATUS_LABEL[lead.status] ?? {
+          label: lead.status,
+          color: "bg-gray-100 text-gray-600",
+        };
+        const pri = lead.priority ? PRIORITY[lead.priority] : null;
+        const notesCount = (lead as any).notesList?.length ?? 0;
+        return (
+          <div
+            key={lead.id}
+            onClick={() => onView(lead)}
+            className={`bg-white rounded-xl border shadow-sm overflow-hidden cursor-pointer active:bg-gray-50 transition-colors
+              ${overdue ? "border-red-300" : "border-gray-200"}`}
+          >
+            {/* Priority bar */}
+            {pri && <div className={`h-1.5 ${pri.bar}`} />}
+
+            <div className="p-4">
+              {/* Address + status */}
+              <div className="flex items-start justify-between gap-2 mb-1">
+                <p className="font-bold text-gray-800 text-base leading-tight">
+                  🏢 {lead.address || lead.name}
+                </p>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium whitespace-nowrap shrink-0 ${status.color}`}
+                >
+                  {status.label}
+                </span>
+              </div>
+
+              {/* Name */}
+              <p className="text-sm text-gray-500 mb-3">👤 {lead.name}</p>
+
+              {/* Phone — big tap-to-call */}
+              {lead.phone && (
+                <a
+                  href={`tel:${lead.phone}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm font-semibold mb-3 active:bg-green-100 transition-colors"
+                >
+                  📞 {lead.phone}
+                </a>
+              )}
+
+              {/* Meta row */}
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">
+                {lead.tenantsCount && (
+                  <span>👥 {lead.tenantsCount} דיירים</span>
+                )}
+                {lead.managementCost && <span>💰 ₪{lead.managementCost}</span>}
+                {lead.currentCompany && <span>🏢 {lead.currentCompany}</span>}
+                {lead.followUpDate && (
+                  <span className={overdue ? "text-red-600 font-medium" : ""}>
+                    📅 {overdue ? "⚠️ " : ""}
+                    {lead.followUpDate}
+                  </span>
+                )}
+                {pri && (
+                  <span className={`px-1.5 py-0.5 rounded-full ${pri.badge}`}>
+                    {pri.label}
+                  </span>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div
+                className="flex gap-2 mt-3"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => onEdit(lead)}
+                  className="flex-1 text-sm border border-blue-300 text-blue-600 py-2 rounded-lg hover:bg-blue-50 font-medium"
+                >
+                  ✏️ עריכה
+                </button>
+                <button
+                  onClick={() => onNotesClick(lead)}
+                  className={`text-sm px-3 py-2 rounded-lg font-medium border transition-colors ${
+                    notesCount > 0
+                      ? "bg-amber-50 border-amber-300 text-amber-700 hover:bg-amber-100"
+                      : "border-dashed border-gray-300 text-gray-400 hover:bg-gray-50"
+                  }`}
+                >
+                  📝{notesCount > 0 ? ` ${notesCount}` : ""}
+                </button>
+                <button
+                  onClick={(e) => lead.id && onDelete(e, lead.id)}
+                  className="text-sm border border-red-300 text-red-500 px-4 py-2 rounded-lg hover:bg-red-50"
+                >
+                  🗑️
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Leads() {
@@ -357,6 +486,7 @@ export default function Leads() {
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
   const [editing, setEditing] = useState<Lead | null>(null);
   const [viewing, setViewing] = useState<Lead | null>(null);
   const [defaultStatus, setDefaultStatus] = useState<LeadStatus>("new");
@@ -372,11 +502,9 @@ export default function Leads() {
     return unsub;
   }, []);
 
-  // Clicking the same column flips direction; new column resets to asc
   const handleSort = (key: SortKey) => {
-    if (key === sortKey) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
+    if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else {
       setSortKey(key);
       setSortDir("asc");
     }
@@ -396,7 +524,6 @@ export default function Leads() {
     return sortLeads(base, sortKey, sortDir);
   }, [leads, search, filterPriority, sortKey, sortDir]);
 
-  // Dashboard stats (always from raw leads, not filtered)
   const stats = useMemo(
     () => ({
       newCount: leads.filter((l) => l.status === "new").length,
@@ -427,57 +554,57 @@ export default function Leads() {
     setDefaultStatus(status);
     setShowForm(true);
   };
-
   const handleEdit = (e: React.MouseEvent, lead: Lead) => {
     e.stopPropagation();
     setEditing(lead);
     setShowForm(true);
   };
-
   const handleEditFromTable = (lead: Lead) => {
     setEditing(lead);
     setShowForm(true);
   };
-
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (confirm("למחוק ליד זה?")) deleteLead(id);
   };
-
   const handleCardClick = (lead: Lead) => {
     setViewing(lead);
     setShowDetail(true);
   };
+  const handleNotesClick = (lead: Lead) => {
+    setViewing(lead);
+    setShowNotes(true);
+  };
 
   return (
-    <div dir="rtl" className="h-full flex flex-col gap-4">
+    <div dir="rtl" className="h-full flex flex-col gap-3">
       {/* ===== DASHBOARD BAR ===== */}
-      <div className="flex gap-3 flex-wrap flex-shrink-0">
-        <div className="flex items-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
-          <span className="text-xl font-black">{stats.newCount}</span>
+      <div className="flex gap-2 flex-wrap flex-shrink-0">
+        <div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
+          <span className="text-lg font-black">{stats.newCount}</span>
           <span>• לידים חדשים</span>
         </div>
-        <div className="flex items-center gap-2 bg-green-600 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
-          <span className="text-xl font-black">{stats.activeCount}</span>
+        <div className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
+          <span className="text-lg font-black">{stats.activeCount}</span>
           <span>• הצעות פעילות</span>
         </div>
-        <div className="flex items-center gap-2 bg-orange-500 text-white px-5 py-3 rounded-xl font-bold text-sm shadow">
-          <span className="text-xl font-black">{stats.closedMonth}</span>
+        <div className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
+          <span className="text-lg font-black">{stats.closedMonth}</span>
           <span>• נסגרו החודש</span>
         </div>
-        <div className="flex items-center gap-2 bg-gray-200 text-gray-700 px-5 py-3 rounded-xl font-bold text-sm shadow mr-auto">
-          <span className="text-xl font-black">{leads.length}</span>
-          <span>• סה"כ לידים</span>
+        <div className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow sm:mr-auto">
+          <span className="text-lg font-black">{leads.length}</span>
+          <span>• סה"כ</span>
         </div>
       </div>
 
-      {/* ===== FILTERS + VIEW TOGGLE + ADD ===== */}
+      {/* ===== FILTERS + TOGGLE + ADD ===== */}
       <div className="flex gap-2 flex-wrap flex-shrink-0">
         <input
           placeholder="🔍 חיפוש לפי שם, כתובת, טלפון..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border rounded-lg px-3 py-2 text-sm flex-1 min-w-48 focus:outline-none focus:ring-2 focus:ring-blue-300"
+          className="border rounded-lg px-3 py-2 text-sm flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-blue-300"
         />
         <select
           value={filterPriority}
@@ -489,12 +616,9 @@ export default function Leads() {
           <option value="medium">🟡 בינונית</option>
           <option value="low">🟢 נמוכה</option>
         </select>
-
-        {/* VIEW TOGGLE */}
         <div className="flex border border-gray-200 rounded-lg overflow-hidden shadow-sm">
           <button
             onClick={() => setViewMode("table")}
-            title="תצוגת טבלה"
             className={`px-3 py-2 text-sm font-medium transition-colors ${
               viewMode === "table"
                 ? "bg-blue-600 text-white"
@@ -505,7 +629,6 @@ export default function Leads() {
           </button>
           <button
             onClick={() => setViewMode("kanban")}
-            title="תצוגת קנבן"
             className={`px-3 py-2 text-sm font-medium transition-colors border-r border-gray-200 ${
               viewMode === "kanban"
                 ? "bg-blue-600 text-white"
@@ -515,7 +638,6 @@ export default function Leads() {
             ⊞ קנבן
           </button>
         </div>
-
         <button
           onClick={() => handleAdd("new")}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
@@ -527,15 +649,29 @@ export default function Leads() {
       {/* ===== TABLE VIEW ===== */}
       {viewMode === "table" && (
         <div className="flex-1 overflow-auto">
-          <LeadTableView
-            leads={filteredLeads}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            onSort={handleSort}
-            onEdit={handleEditFromTable}
-            onView={handleCardClick}
-            onDelete={handleDelete}
-          />
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <LeadTableView
+              leads={filteredLeads}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onEdit={handleEditFromTable}
+              onView={handleCardClick}
+              onDelete={handleDelete}
+              onNotesClick={handleNotesClick}
+            />
+          </div>
+          {/* Mobile cards */}
+          <div className="md:hidden">
+            <LeadMobileList
+              leads={filteredLeads}
+              onEdit={handleEditFromTable}
+              onView={handleCardClick}
+              onDelete={handleDelete}
+              onNotesClick={handleNotesClick}
+            />
+          </div>
         </div>
       )}
 
@@ -547,13 +683,11 @@ export default function Leads() {
               const colLeads = filteredLeads
                 .filter((l) => l.status === col.id)
                 .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
               return (
                 <div
                   key={col.id}
                   className={`flex-shrink-0 w-60 rounded-xl border ${col.border} flex flex-col overflow-hidden shadow-sm`}
                 >
-                  {/* Column header */}
                   <div
                     className={`${col.headerBg} text-white px-3 py-2 flex justify-between items-center`}
                   >
@@ -562,7 +696,6 @@ export default function Leads() {
                       {colLeads.length}
                     </span>
                   </div>
-
                   <Droppable droppableId={col.id}>
                     {(provided, snapshot) => (
                       <div
@@ -576,7 +709,6 @@ export default function Leads() {
                             ? PRIORITY[lead.priority]
                             : null;
                           const overdue = isOverdue(lead.followUpDate);
-
                           return (
                             <Draggable
                               key={lead.id}
@@ -596,7 +728,6 @@ export default function Leads() {
                                   {pri && (
                                     <div className={`h-1 w-full ${pri.bar}`} />
                                   )}
-
                                   <div className="p-3">
                                     <p className="font-bold text-sm text-gray-800 leading-tight mb-1">
                                       🏢 {lead.address || lead.name}
@@ -609,9 +740,16 @@ export default function Leads() {
                                     <p className="text-xs text-gray-600 mt-1">
                                       👤 {lead.name}
                                     </p>
-                                    <p className="text-xs text-gray-500">
-                                      📞 {lead.phone}
-                                    </p>
+                                    <div onClick={(e) => e.stopPropagation()}>
+                                      {lead.phone && (
+                                        <a
+                                          href={`tel:${lead.phone}`}
+                                          className="text-xs text-green-700 mt-0.5 block"
+                                        >
+                                          📞 {lead.phone}
+                                        </a>
+                                      )}
+                                    </div>
                                     {lead.currentCompany && (
                                       <p className="text-xs text-gray-400 mt-1">
                                         🏢 {lead.currentCompany}
@@ -680,7 +818,6 @@ export default function Leads() {
                           );
                         })}
                         {provided.placeholder}
-
                         <button
                           onClick={() => handleAdd(col.id)}
                           className="w-full text-xs text-gray-400 hover:text-gray-600 py-2 border border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors"
@@ -715,6 +852,9 @@ export default function Leads() {
             setShowForm(true);
           }}
         />
+      )}
+      {showNotes && viewing && (
+        <LeadNotesModal lead={viewing} onClose={() => setShowNotes(false)} />
       )}
     </div>
   );

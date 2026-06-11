@@ -3,22 +3,13 @@ import type { Lead, LeadPriority } from "../../types";
 import { deleteLead, updateLead } from "../../lib/leads.service";
 import ConfirmModal from "../ConfirmModal";
 import InputModal from "../InputModal";
+import LeadNoteSection, { type LeadNote } from "./LeadNoteSection";
 
 interface Props {
   lead: Lead;
   onClose: () => void;
   onEdit: () => void;
 }
-
-const Row = ({ label, value }: { label: string; value?: any }) =>
-  value ? (
-    <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-      <span className="text-gray-500 text-sm">{label}</span>
-      <span className="text-gray-800 text-sm font-medium text-right max-w-[60%]">
-        {String(value)}
-      </span>
-    </div>
-  ) : null;
 
 const PRIORITY_LABEL: Record<LeadPriority, string> = {
   high: "🔴 גבוהה",
@@ -40,14 +31,62 @@ function isOverdue(dateStr?: string) {
   return new Date(dateStr) < new Date();
 }
 
+// Simple text row
+const Row = ({ label, value }: { label: string; value?: any }) =>
+  value ? (
+    <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
+      <span className="text-gray-500 text-sm">{label}</span>
+      <span className="text-gray-800 text-sm font-medium text-right max-w-[60%]">
+        {String(value)}
+      </span>
+    </div>
+  ) : null;
+
+// Phone row with tap-to-call
+const PhoneRow = ({ phone }: { phone?: string }) =>
+  phone ? (
+    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+      <span className="text-gray-500 text-sm">טלפון</span>
+      <a
+        href={`tel:${phone}`}
+        className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-100 active:bg-green-200 transition-colors"
+      >
+        📞 {phone}
+      </a>
+    </div>
+  ) : null;
+
 export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
   const overdue = isOverdue(lead.followUpDate);
   const [showAddField, setShowAddField] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+  // Local notes state — synced to Firestore on each add
+  const [notesList, setNotesList] = useState<LeadNote[]>(
+    (lead as any).notesList ?? [],
+  );
+
   const handleDelete = async () => {
     await deleteLead(lead.id!);
     onClose();
+  };
+
+  const handleAddNote = (message: string, author: string) => {
+    const newNote: LeadNote = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      author,
+      message,
+    };
+    const updated = [...notesList, newNote];
+    setNotesList(updated);
+    updateLead(lead.id!, { notesList: updated } as any);
+  };
+
+  const handleDeleteNote = (id: string) => {
+    const updated = notesList.filter((n) => n.id !== id);
+    setNotesList(updated);
+    updateLead(lead.id!, { notesList: updated } as any);
   };
 
   const handleAddField = (label: string) => {
@@ -74,11 +113,11 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       dir="rtl"
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
-        {/* Header */}
+      <div className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-lg max-h-[92vh] flex flex-col">
+        {/* ── Header ── */}
         <div className="flex justify-between items-center p-4 border-b">
           <div>
             <h2 className="text-xl font-bold">{lead.address || lead.name}</h2>
@@ -88,14 +127,15 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-2xl"
+            className="text-gray-400 hover:text-gray-600 text-2xl w-8 h-8 flex items-center justify-center"
           >
             ×
           </button>
         </div>
 
-        {/* Content */}
+        {/* ── Content ── */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          {/* Overdue warning */}
           {overdue && (
             <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-red-600 text-sm font-medium">
               ⚠️ מועד המשך טיפול עבר! ({lead.followUpDate})
@@ -108,6 +148,7 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             </div>
           )}
 
+          {/* Building */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 פרטי הבניין
@@ -116,15 +157,17 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="מספר דיירים" value={lead.tenantsCount} />
           </section>
 
+          {/* Contact */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               👤 פרטי קשר
             </h3>
             <Row label="שם ועד הבית" value={lead.name} />
-            <Row label="טלפון" value={lead.phone} />
+            <PhoneRow phone={lead.phone} />
             <Row label="אימייל" value={lead.email} />
           </section>
 
+          {/* Current state */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 מצב נוכחי
@@ -136,6 +179,7 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             />
           </section>
 
+          {/* Our proposal */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               💰 הצעה שלנו
@@ -150,6 +194,7 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="עלות גינון" value={lead.gardeningCost} />
           </section>
 
+          {/* Sales process */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               📅 תהליך מכירה
@@ -169,18 +214,14 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="המשך טיפול" value={lead.followUpNotes} />
           </section>
 
-          {lead.notes && (
-            <section>
-              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-                📝 הערות
-              </h3>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                {lead.notes}
-              </p>
-            </section>
-          )}
+          {/* ── Notes section (new multi-note system) ── */}
+          <LeadNoteSection
+            notes={notesList}
+            onAddNote={handleAddNote}
+            onDeleteNote={handleDeleteNote}
+          />
 
-          {/* ===== שדות מותאמים אישית ===== */}
+          {/* Custom fields */}
           {((lead.customFields || []).length > 0 || true) && (
             <section>
               <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
@@ -219,7 +260,7 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div className="flex gap-2 p-4 border-t">
           <button
             onClick={onEdit}
@@ -231,7 +272,7 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             onClick={handleDelete}
             className="border border-red-400 text-red-500 px-4 py-2 rounded-lg hover:bg-red-50 text-sm"
           >
-            🗑️ מחיקה
+            🗑️
           </button>
           <button
             onClick={onClose}
