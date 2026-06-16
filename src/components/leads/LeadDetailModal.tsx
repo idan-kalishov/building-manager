@@ -49,7 +49,6 @@ function formatDate(iso: string) {
   });
 }
 
-// Simple text row
 const Row = ({ label, value }: { label: string; value?: any }) =>
   value ? (
     <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
@@ -60,7 +59,6 @@ const Row = ({ label, value }: { label: string; value?: any }) =>
     </div>
   ) : null;
 
-// Phone row with tap-to-call
 const PhoneRow = ({ phone }: { phone?: string }) =>
   phone ? (
     <div className="flex justify-between items-center py-2 border-b border-gray-100">
@@ -210,7 +208,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
 
         {/* ── Content ── */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {/* Overdue warning */}
           {overdue && (
             <div className="bg-red-50 border border-red-300 rounded-lg px-3 py-2 text-red-600 text-sm font-medium">
               ⚠️ מועד המשך טיפול עבר! ({lead.followUpDate})
@@ -223,7 +220,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             </div>
           )}
 
-          {/* Building */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 פרטי הבניין
@@ -232,7 +228,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="מספר דיירים" value={lead.tenantsCount} />
           </section>
 
-          {/* Contact */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               👤 פרטי קשר
@@ -242,7 +237,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="אימייל" value={lead.email} />
           </section>
 
-          {/* Current state */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 מצב נוכחי
@@ -254,7 +248,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             />
           </section>
 
-          {/* Our proposal */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               💰 הצעה שלנו
@@ -269,7 +262,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="עלות גינון" value={lead.gardeningCost} />
           </section>
 
-          {/* Sales process */}
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               📅 תהליך מכירה
@@ -289,7 +281,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="המשך טיפול" value={lead.followUpNotes} />
           </section>
 
-          {/* ── Call Summaries (read-only) ── */}
           {callSummaries.length > 0 && (
             <section>
               <div className="flex items-center justify-between border-b pb-1 mb-3">
@@ -308,50 +299,44 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             </section>
           )}
 
-          {/* ── Notes ── */}
           <LeadNoteSection
             notes={notesList}
             onAddNote={handleAddNote}
             onDeleteNote={handleDeleteNote}
           />
 
-          {/* Custom fields */}
-          {((lead.customFields || []).length > 0 || true) && (
-            <section>
-              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-                📌 שדות נוספים
-              </h3>
-              {(lead.customFields || []).map((field) => (
-                <div
-                  key={field.id}
-                  className="flex justify-between items-center py-2 border-b border-gray-100 gap-2"
-                >
-                  <span className="text-gray-500 text-sm w-1/3">
-                    {field.label}
-                  </span>
-                  <input
-                    className="text-sm text-gray-800 font-medium text-right flex-1 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none bg-transparent"
-                    value={field.value}
-                    onChange={(e) =>
-                      handleFieldChange(field.id, e.target.value)
-                    }
-                  />
-                  <button
-                    onClick={() => setConfirmDelete(field.id)}
-                    className="text-red-400 hover:text-red-600 text-xs px-1"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => setShowAddField(true)}
-                className="mt-3 text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg w-full py-2"
+          <section>
+            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+              📌 שדות נוספים
+            </h3>
+            {(lead.customFields || []).map((field) => (
+              <div
+                key={field.id}
+                className="flex justify-between items-center py-2 border-b border-gray-100 gap-2"
               >
-                + הוסף שדה
-              </button>
-            </section>
-          )}
+                <span className="text-gray-500 text-sm w-1/3">
+                  {field.label}
+                </span>
+                <input
+                  className="text-sm text-gray-800 font-medium text-right flex-1 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none bg-transparent"
+                  value={field.value}
+                  onChange={(e) => handleFieldChange(field.id, e.target.value)}
+                />
+                <button
+                  onClick={() => setConfirmDelete(field.id)}
+                  className="text-red-400 hover:text-red-600 text-xs px-1"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => setShowAddField(true)}
+              className="mt-3 text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg w-full py-2"
+            >
+              + הוסף שדה
+            </button>
+          </section>
         </div>
 
         {/* ── Footer ── */}

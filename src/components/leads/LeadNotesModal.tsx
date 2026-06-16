@@ -17,7 +17,10 @@ interface CallSummary {
 
 type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
 
-const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
+// ─── Proxy Configuration ──────────────────────────────────────────────────────
+const PROXY_URL = "https://nameless-water-1203.vaadabait68.workers.dev";
+
+// ─── API Functions ────────────────────────────────────────────────────────────
 
 async function transcribeAudio(file: File): Promise<string> {
   const formData = new FormData();
@@ -25,14 +28,10 @@ async function transcribeAudio(file: File): Promise<string> {
   formData.append("model", "whisper-large-v3-turbo");
   formData.append("language", "he");
 
-  const res = await fetch(
-    "https://api.groq.com/openai/v1/audio/transcriptions",
-    {
-      method: "POST",
-      headers: { Authorization: `Bearer ${GROQ_API_KEY}` },
-      body: formData,
-    },
-  );
+  const res = await fetch(`${PROXY_URL}/api/transcribe`, {
+    method: "POST",
+    body: formData,
+  });
 
   if (!res.ok) throw new Error(`תמלול נכשל: ${await res.text()}`);
   const data = await res.json();
@@ -41,44 +40,12 @@ async function transcribeAudio(file: File): Promise<string> {
 }
 
 async function summarizeTranscript(transcript: string): Promise<string> {
-  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const res = await fetch(`${PROXY_URL}/api/summarize`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${GROQ_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      model: "llama-3.3-70b-versatile",
-      temperature: 0.3,
-      messages: [
-        {
-          role: "user",
-          content: `זהו תמלול של שיחה עם לקוח/ועד בית בנוגע לניהול הבניין:
-
-"""
-${transcript}
-"""
-
-אנא חלץ ממנו בעברית:
-- נושאים שעלו בשיחה
-- בקשות או דרישות של הלקוח
-- הסכמות שהושגו
-- צעדים הבאים / פעולות נדרשות
-- תאריך מעקב אם הוזכר
-
-החזר בפורמט הזה בדיוק, ללא טקסט נוסף לפני או אחרי:
-
-✅ נקודות מרכזיות:
-[רשימת נקודות]
-
-📅 פעולות נדרשות:
-[רשימת פעולות]
-
-🔔 מעקב:
-[תאריך או "לא הוזכר"]`,
-        },
-      ],
-    }),
+    body: JSON.stringify({ transcript }),
   });
 
   if (!res.ok) throw new Error(`סיכום נכשל: ${await res.text()}`);
@@ -99,6 +66,8 @@ function formatDate(iso: string) {
   });
 }
 
+// ─── Call Summary Card Component ─────────────────────────────────────────────
+
 function CallSummaryCard({
   summary,
   onDelete,
@@ -109,7 +78,6 @@ function CallSummaryCard({
   const [expanded, setExpanded] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
 
-  // Pull first non-empty line as the preview title
   const previewLine =
     summary.summary
       .split("\n")
@@ -123,7 +91,6 @@ function CallSummaryCard({
 
   return (
     <div className="bg-white border border-purple-100 rounded-xl overflow-hidden shadow-sm">
-      {/* Card header — always visible */}
       <button
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-purple-50/40 transition-colors"
@@ -142,15 +109,12 @@ function CallSummaryCard({
         </span>
       </button>
 
-      {/* Expanded body */}
       {expanded && (
         <div className="px-4 pb-4 border-t border-purple-50">
-          {/* Summary content */}
           <div className="mt-3 text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
             {summary.summary}
           </div>
 
-          {/* Transcript toggle */}
           <button
             onClick={() => setShowTranscript((v) => !v)}
             className="mt-3 text-[11px] text-purple-500 hover:text-purple-700 underline underline-offset-2 transition-colors"
@@ -164,7 +128,6 @@ function CallSummaryCard({
             </div>
           )}
 
-          {/* Delete */}
           <div className="flex justify-end mt-3">
             <button
               onClick={onDelete}
@@ -178,6 +141,8 @@ function CallSummaryCard({
     </div>
   );
 }
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function LeadNotesModal({ lead, onClose }: Props) {
   const [notesList, setNotesList] = useState<LeadNote[]>(
