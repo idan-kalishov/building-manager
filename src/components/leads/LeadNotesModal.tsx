@@ -20,12 +20,27 @@ type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
 // ─── Proxy Configuration ──────────────────────────────────────────────────────
 const PROXY_URL = "https://nameless-water-1203.vaadabait68.workers.dev";
 
-// ─── Helper: Convert File to Base64 ──────────────────────────────────────────
+// ─── UUID Polyfill (Android WebView / older browsers) ────────────────────────
+function generateUUID(): string {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
+    return crypto.randomUUID();
+  }
+  return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, (c) => {
+    const n = Number(c);
+    return (
+      n ^
+      (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (n / 4)))
+    ).toString(16);
+  });
+}
 
+// ─── Helper: Convert File to Base64 ──────────────────────────────────────────
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
     reader.onload = () => {
       if (typeof reader.result === "string") {
         const base64 = reader.result.split(",")[1];
@@ -35,171 +50,104 @@ function fileToBase64(file: File): Promise<string> {
       }
     };
     reader.onerror = (error) => reject(error);
+    reader.readAsDataURL(file);
   });
 }
 
-// ─── API Functions with Full Error Logging ──────────────────────────────────
+// ─── Detect MIME Type ─────────────────────────────────────────────────────────
+// Samsung Galaxy Voice Recorder often saves .m4a files, but Chrome on Android
+// may incorrectly report them as "video/mp4". We normalize that here.
+function detectMimeType(file: File): string {
+  const ext = file.name.split(".").pop()?.toLowerCase();
 
+  if (ext === "m4a") return "audio/mp4";
+
+  switch (ext) {
+    case "mp3":
+      return "audio/mpeg";
+    case "wav":
+      return "audio/wav";
+    case "ogg":
+      return "audio/ogg";
+    case "webm":
+      return "audio/webm";
+    case "aac":
+      return "audio/aac";
+    case "3gp":
+      return "audio/3gpp";
+    case "flac":
+      return "audio/flac";
+    default:
+      break;
+  }
+
+  if (
+    file.type.startsWith("video/") &&
+    ext &&
+    ["m4a", "mp3", "wav", "ogg", "aac", "flac"].includes(ext)
+  ) {
+    return "audio/mp4";
+  }
+
+  return file.type || "audio/mpeg";
+}
+
+// ─── API Functions ────────────────────────────────────────────────────────────
 async function transcribeAudio(file: File): Promise<string> {
-  const fullLog: any = {
-    step: "start",
-    fileInfo: {
-      name: file.name,
-      type: file.type || "empty (iOS issue)",
-      size: `${(file.size / 1024).toFixed(2)} KB`,
-      sizeBytes: file.size,
-    },
-    timestamp: new Date().toISOString(),
-  };
+  const mimeType = detectMimeType(file);
+
+  console.log("📁 File details:", {
+    name: file.name,
+    browserType: file.type || "empty (Android issue)",
+    resolvedMimeType: mimeType,
+    size: `${(file.size / 1024).toFixed(2)} KB`,
+  });
 
   try {
-    console.log("📁 File details:", fullLog.fileInfo);
-
-    // Step 1: Convert to base64
-    fullLog.step = "converting to base64";
-    console.log("🔄 Converting to base64...");
-
     const base64Data = await fileToBase64(file);
-    fullLog.base64Length = base64Data.length;
-    console.log("✅ Base64 conversion complete, length:", base64Data.length);
 
-    // Step 2: Determine MIME type
-    fullLog.step = "determining MIME type";
-    let mimeType = file.type;
-    if (!mimeType || mimeType === "") {
-      if (file.name.toLowerCase().endsWith(".m4a")) {
-        mimeType = "audio/mp4";
-      } else if (file.name.toLowerCase().endsWith(".mp3")) {
-        mimeType = "audio/mpeg";
-      } else if (file.name.toLowerCase().endsWith(".wav")) {
-        mimeType = "audio/wav";
-      } else {
-        mimeType = "audio/mpeg";
-      }
-    }
-    fullLog.mimeType = mimeType;
-    console.log("📄 MIME type:", mimeType);
-
-    // Step 3: Send to proxy
-    fullLog.step = "sending to proxy";
-    console.log("📤 Sending to proxy via base64...");
-    console.log("🔗 Proxy URL:", PROXY_URL);
-
-    const requestBody = {
-      file: base64Data,
-      filename: file.name,
-      mimeType: mimeType,
-      model: "whisper-large-v3-turbo",
-      language: "he",
-    };
-
-    fullLog.requestBody = {
-      filename: requestBody.filename,
-      mimeType: requestBody.mimeType,
-      model: requestBody.model,
-      language: requestBody.language,
-      fileSize: base64Data.length,
-    };
-
-    console.log("📤 Request body (summary):", fullLog.requestBody);
+    console.log("📤 Sending to proxy via base64, mimeType:", mimeType);
 
     const res = await fetch(`${PROXY_URL}/api/transcribe-base64`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        file: base64Data,
+        filename: file.name,
+        mimeType,
+        model: "whisper-large-v3-turbo",
+        language: "he",
+      }),
     });
 
-    fullLog.step = "received response";
-    fullLog.responseStatus = res.status;
-    fullLog.responseStatusText = res.statusText;
-    fullLog.responseHeaders = Object.fromEntries(res.headers.entries());
-
     console.log("📥 Response status:", res.status);
-    console.log("📥 Response headers:", fullLog.responseHeaders);
 
-    // Get full response text
     const responseText = await res.text();
-    fullLog.responseBody = responseText;
-    console.log("📥 Full response body:", responseText);
+    console.log("📥 Response body:", responseText);
 
     if (!res.ok) {
-      fullLog.error = "response not OK";
-      fullLog.errorDetails = responseText;
-      console.error("❌ Full error details:", fullLog);
-
-      // Try to parse error as JSON
-      let errorMessage = responseText;
-      try {
-        const errorJson = JSON.parse(responseText);
-        if (errorJson.error) {
-          errorMessage =
-            typeof errorJson.error === "string"
-              ? errorJson.error
-              : JSON.stringify(errorJson.error);
-        }
-        if (errorJson.details) {
-          errorMessage += `\nDetails: ${JSON.stringify(errorJson.details)}`;
-        }
-      } catch (e) {
-        // Not JSON, keep as is
-      }
-
-      throw new Error(`תמלול נכשל (${res.status}): ${errorMessage}`);
+      throw new Error(`תמלול נכשל: ${responseText}`);
     }
 
-    // Step 4: Parse response
-    fullLog.step = "parsing response";
-    let data;
-    try {
-      data = JSON.parse(responseText);
-      fullLog.parsedData = data;
-      console.log("✅ Parsed response:", data);
-    } catch (e: any) {
-      fullLog.error = "JSON parse error";
-      fullLog.errorDetails = e.message;
-      console.error("❌ JSON parse error:", fullLog);
-      throw new Error(
-        `שגיאה בקבלת תשובה: ${responseText.substring(0, 200)}...`,
-      );
-    }
+    const data = JSON.parse(responseText);
 
     if (!data.text) {
-      fullLog.error = "no text in response";
-      fullLog.errorDetails = data;
-      console.error("❌ No text in response:", fullLog);
-      throw new Error(
-        `לא התקבל תמלול מהשרת. תשובה: ${JSON.stringify(data).substring(0, 200)}...`,
-      );
+      throw new Error("לא התקבל תמלול מהשרת");
     }
-
-    fullLog.step = "success";
-    fullLog.transcriptLength = data.text.length;
-    console.log("✅ Success! Transcript length:", data.text.length);
-    console.log("📋 Full log:", fullLog);
 
     return data.text;
   } catch (err: any) {
-    fullLog.error = err.message;
-    fullLog.stack = err.stack;
-    console.error("💥 FULL ERROR:", fullLog);
-    console.error("💥 Error stack:", err.stack);
+    console.error("💥 Transcribe error:", err);
     throw err;
   }
 }
 
 async function summarizeTranscript(transcript: string): Promise<string> {
-  const fullLog: any = {
-    step: "summarize_start",
-    transcriptLength: transcript.length,
-    timestamp: new Date().toISOString(),
-  };
+  console.log("📝 Summarizing transcript, length:", transcript.length);
 
   try {
-    console.log("📝 Summarizing transcript, length:", transcript.length);
-    fullLog.step = "sending to proxy";
-
     const res = await fetch(`${PROXY_URL}/api/summarize`, {
       method: "POST",
       headers: {
@@ -208,68 +156,25 @@ async function summarizeTranscript(transcript: string): Promise<string> {
       body: JSON.stringify({ transcript }),
     });
 
-    fullLog.responseStatus = res.status;
-    fullLog.responseStatusText = res.statusText;
-    fullLog.responseHeaders = Object.fromEntries(res.headers.entries());
-
     console.log("📥 Summarize response status:", res.status);
 
-    const responseText = await res.text();
-    fullLog.responseBody = responseText;
-    console.log("📥 Summarize full response:", responseText);
-
     if (!res.ok) {
-      fullLog.error = "response not OK";
-      console.error("❌ Summarize error details:", fullLog);
-
-      let errorMessage = responseText;
-      try {
-        const errorJson = JSON.parse(responseText);
-        if (errorJson.error) {
-          errorMessage =
-            typeof errorJson.error === "string"
-              ? errorJson.error
-              : JSON.stringify(errorJson.error);
-        }
-      } catch (e) {
-        // Not JSON, keep as is
-      }
-
-      throw new Error(`סיכום נכשל (${res.status}): ${errorMessage}`);
+      const errorText = await res.text();
+      console.error("❌ Summarize error:", errorText);
+      throw new Error(`סיכום נכשל: ${errorText}`);
     }
 
-    let data;
-    try {
-      data = JSON.parse(responseText);
-      fullLog.parsedData = data;
-      console.log("✅ Summarize parsed:", data);
-    } catch (e: any) {
-      fullLog.error = "JSON parse error";
-      console.error("❌ Summarize JSON error:", fullLog);
-      throw new Error(
-        `שגיאה בקבלת סיכום: ${responseText.substring(0, 200)}...`,
-      );
-    }
+    const data = await res.json();
+    console.log("✅ Summarize response:", data);
 
     const text = data.choices?.[0]?.message?.content;
     if (!text) {
-      fullLog.error = "no text in summary response";
-      console.error("❌ No summary text:", fullLog);
-      throw new Error(
-        `לא התקבלה תשובה. תשובה: ${JSON.stringify(data).substring(0, 200)}...`,
-      );
+      throw new Error("לא התקבלה תשובה מהשרת");
     }
-
-    fullLog.step = "success";
-    fullLog.summaryLength = text.length;
-    console.log("✅ Summary success! Length:", text.length);
-    console.log("📋 Full summary log:", fullLog);
 
     return text;
   } catch (err: any) {
-    fullLog.error = err.message;
-    fullLog.stack = err.stack;
-    console.error("💥 FULL SUMMARY ERROR:", fullLog);
+    console.error("💥 Summarize error:", err);
     throw err;
   }
 }
@@ -286,7 +191,6 @@ function formatDate(iso: string) {
 }
 
 // ─── Call Summary Card Component ─────────────────────────────────────────────
-
 function CallSummaryCard({
   summary,
   onDelete,
@@ -362,7 +266,6 @@ function CallSummaryCard({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-
 export default function LeadNotesModal({ lead, onClose }: Props) {
   const [notesList, setNotesList] = useState<LeadNote[]>(
     (lead as any).notesList ?? [],
@@ -376,7 +279,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
   );
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [fullErrorDetails, setFullErrorDetails] = useState<string | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -387,7 +289,7 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
 
   const handleAddNote = (message: string, author: string) => {
     const newNote: LeadNote = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       timestamp: new Date().toISOString(),
       author,
       message,
@@ -410,22 +312,19 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
       return;
     }
 
-    console.log("=".repeat(60));
-    console.log("📱 NEW UPLOAD STARTED");
-    console.log("=".repeat(60));
-    console.log("📁 File:", {
+    console.log("📱 File selected:", {
       name: file.name,
-      type: file.type || "(empty - iOS issue)",
+      browserType: file.type || "(empty - Android issue)",
       size: `${(file.size / 1024).toFixed(2)} KB`,
-      lastModified: new Date(file.lastModified).toISOString(),
     });
 
     setPendingSummary(null);
     setPendingTranscript(null);
     setErrorMsg(null);
-    setFullErrorDetails(null);
     setUploadProgress(0);
     setUploadStatus("uploading");
+
+    if (fileInputRef.current) fileInputRef.current.value = "";
 
     try {
       const transcript = await transcribeAudio(file);
@@ -438,34 +337,20 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
       console.log("✅ Summarization complete, length:", summary.length);
 
       setUploadProgress(100);
-
       setPendingTranscript(transcript);
       setPendingSummary(summary);
       setUploadStatus("done");
-      console.log("=".repeat(60));
-      console.log("✅ UPLOAD SUCCESSFUL");
-      console.log("=".repeat(60));
     } catch (err: any) {
-      console.error("=".repeat(60));
-      console.error("💥 UPLOAD FAILED");
-      console.error("=".repeat(60));
-      console.error("💥 Error message:", err.message);
-      console.error("💥 Full error:", err);
-
+      console.error("💥 Upload error:", err);
       setErrorMsg(err.message ?? "שגיאה לא ידועה");
-      setFullErrorDetails(
-        JSON.stringify(err, Object.getOwnPropertyNames(err), 2),
-      );
       setUploadStatus("error");
-    } finally {
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
   const handleSaveCallSummary = () => {
     if (!pendingSummary || !pendingTranscript) return;
     const newEntry: CallSummary = {
-      id: crypto.randomUUID(),
+      id: generateUUID(),
       timestamp: new Date().toISOString(),
       summary: pendingSummary,
       transcript: pendingTranscript,
@@ -492,6 +377,11 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
     updateLead(lead.id!, { callSummaries: updated } as any);
   };
 
+  const handleUploadButtonClick = () => {
+    console.log("📁 File input triggered");
+    fileInputRef.current?.click();
+  };
+
   return (
     <div
       className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
@@ -502,7 +392,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
         className="bg-white rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md flex flex-col max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
           <div>
             <h2 className="font-bold text-gray-800 text-base">
@@ -520,8 +409,10 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* ── Call Recordings Section ── */}
+        <div
+          className="flex-1 overflow-y-auto overscroll-contain"
+          style={{ WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+        >
           <div className="px-4 pt-4 pb-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-bold text-purple-700 uppercase tracking-wide">
@@ -534,46 +425,29 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
               )}
             </div>
 
-            {/* Upload trigger */}
             {(uploadStatus === "idle" || uploadStatus === "error") && (
               <>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".m4a,audio/*,video/*"
+                  accept=".m4a,.mp3,.wav,.ogg,.webm,.aac,.3gp,audio/mp4,audio/mpeg,audio/wav,audio/ogg,audio/webm,audio/aac,audio/3gpp,video/mp4"
                   className="hidden"
                   onChange={handleFileChange}
                 />
                 <button
-                  onClick={() => {
-                    console.log("📁 File input triggered");
-                    fileInputRef.current?.click();
-                  }}
+                  onClick={handleUploadButtonClick}
                   className="w-full border-2 border-dashed border-purple-200 rounded-xl py-2.5 text-xs text-purple-500 hover:bg-purple-50 hover:border-purple-300 transition-colors font-medium"
                 >
                   + העלה הקלטת שיחה לתמלול אוטומטי
                 </button>
-                {uploadStatus === "error" && (
-                  <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-xs text-red-600 font-medium">
-                      ❌ {errorMsg}
-                    </p>
-                    {fullErrorDetails && (
-                      <details className="mt-2">
-                        <summary className="text-xs text-red-500 cursor-pointer">
-                          הצג פרטים מלאים
-                        </summary>
-                        <pre className="mt-2 text-[10px] text-red-700 bg-red-50 p-2 rounded overflow-x-auto whitespace-pre-wrap max-h-40">
-                          {fullErrorDetails}
-                        </pre>
-                      </details>
-                    )}
-                  </div>
+                {uploadStatus === "error" && errorMsg && (
+                  <p className="text-xs text-red-500 mt-2 text-center">
+                    ❌ {errorMsg}
+                  </p>
                 )}
               </>
             )}
 
-            {/* Loading with progress */}
             {(uploadStatus === "uploading" ||
               uploadStatus === "processing") && (
               <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3">
@@ -596,7 +470,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
               </div>
             )}
 
-            {/* Preview before saving */}
             {uploadStatus === "done" && pendingSummary && (
               <div className="bg-purple-50 border border-purple-200 rounded-xl overflow-hidden">
                 <div className="px-3 py-2 bg-purple-100 flex items-center gap-2">
@@ -625,7 +498,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
               </div>
             )}
 
-            {/* Saved summaries */}
             {callSummaries.length > 0 && (
               <div className="mt-3 space-y-2">
                 {callSummaries.map((s) => (
@@ -645,10 +517,8 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
             )}
           </div>
 
-          {/* Divider */}
           <div className="mx-4 border-t border-gray-100 my-1" />
 
-          {/* ── Notes Section ── */}
           <div className="px-4 pt-3 pb-4">
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">
               📝 הערות
