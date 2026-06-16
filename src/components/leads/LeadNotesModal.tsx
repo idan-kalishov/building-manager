@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Lead } from "../../types";
 import { updateLead } from "../../lib/leads.service";
 import LeadNoteSection, { type LeadNote } from "./LeadNoteSection";
@@ -20,39 +20,132 @@ type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
 // ─── Proxy Configuration ──────────────────────────────────────────────────────
 const PROXY_URL = "https://nameless-water-1203.vaadabait68.workers.dev";
 
+// ─── Helper Functions ─────────────────────────────────────────────────────────
+
+/**
+ * Prepares a file for upload - especially important for mobile m4a files
+ * iOS Safari often sends m4a files with empty content-type
+ */
+function prepareFileForUpload(file: File): File {
+  console.log("📁 Original file:", {
+    name: file.name,
+    type: file.type || "(empty)",
+    size: `${(file.size / 1024).toFixed(2)} KB`,
+  });
+
+  // If it's an m4a file with empty or incorrect content-type
+  if (file.name.toLowerCase().endsWith(".m4a")) {
+    // Create a new File with proper MIME type
+    const fixedFile = new File(
+      [file],
+      file.name,
+      { type: "audio/mp4" }, // Correct MIME type for m4a
+    );
+    console.log("📁 Fixed file:", {
+      name: fixedFile.name,
+      type: fixedFile.type,
+      size: `${(fixedFile.size / 1024).toFixed(2)} KB`,
+    });
+    return fixedFile;
+  }
+
+  // For other files, ensure they have a valid type
+  if (!file.type || file.type === "") {
+    // Try to guess from extension
+    let mimeType = "audio/mpeg";
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (ext === "wav") mimeType = "audio/wav";
+    else if (ext === "mp3") mimeType = "audio/mpeg";
+    else if (ext === "m4a") mimeType = "audio/mp4";
+    else if (ext === "ogg") mimeType = "audio/ogg";
+    else if (ext === "mp4" || ext === "mov") mimeType = "video/mp4";
+
+    return new File([file], file.name, { type: mimeType });
+  }
+
+  return file;
+}
+
 // ─── API Functions ────────────────────────────────────────────────────────────
 
 async function transcribeAudio(file: File): Promise<string> {
+  // Prepare file for mobile
+  const preparedFile = prepareFileForUpload(file);
+
   const formData = new FormData();
-  formData.append("file", file);
+  formData.append("file", preparedFile);
   formData.append("model", "whisper-large-v3-turbo");
   formData.append("language", "he");
+  formData.append("response_format", "json");
 
-  const res = await fetch(`${PROXY_URL}/api/transcribe`, {
-    method: "POST",
-    body: formData,
-  });
+  console.log("🚀 Sending to Cloudflare Worker...");
+  console.log(
+    "📤 FormData file:",
+    preparedFile.name,
+    preparedFile.type,
+    preparedFile.size,
+  );
 
-  if (!res.ok) throw new Error(`תמלול נכשל: ${await res.text()}`);
-  const data = await res.json();
-  if (!data.text) throw new Error("לא התקבל תמלול");
-  return data.text;
+  try {
+    const res = await fetch(`${PROXY_URL}/api/transcribe`, {
+      method: "POST",
+      body: formData,
+    });
+
+    console.log("📥 Response status:", res.status);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error response:", errorText);
+      throw new Error(`תמלול נכשל: ${errorText}`);
+    }
+
+    const data = await res.json();
+    console.log("✅ Groq response:", data);
+
+    if (!data.text) {
+      console.error("❌ No text in response:", data);
+      throw new Error("לא התקבל תמלול מהשרת");
+    }
+    return data.text;
+  } catch (err: any) {
+    console.error("💥 Upload error:", err);
+    throw err;
+  }
 }
 
 async function summarizeTranscript(transcript: string): Promise<string> {
-  const res = await fetch(`${PROXY_URL}/api/summarize`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ transcript }),
-  });
+  console.log("📝 Summarizing transcript, length:", transcript.length);
 
-  if (!res.ok) throw new Error(`סיכום נכשל: ${await res.text()}`);
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content;
-  if (!text) throw new Error("לא התקבלה תשובה");
-  return text;
+  try {
+    const res = await fetch(`${PROXY_URL}/api/summarize`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ transcript }),
+    });
+
+    console.log("📥 Summarize response status:", res.status);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Summarize error:", errorText);
+      throw new Error(`סיכום נכשל: ${errorText}`);
+    }
+
+    const data = await res.json();
+    console.log("✅ Summarize response:", data);
+
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) {
+      throw new Error("לא התקבלה תשובה מהשרת");
+    }
+    return text;
+  } catch (err: any) {
+    console.error("💥 Summarize error:", err);
+    throw err;
+  }
 }
 
 function formatDate(iso: string) {
@@ -157,7 +250,13 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
   );
   const [pendingSummary, setPendingSummary] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Debug: Log when component mounts
+  useEffect(() => {
+    console.log("📱 LeadNotesModal mounted, proxy URL:", PROXY_URL);
+  }, []);
 
   const handleAddNote = (message: string, author: string) => {
     const newNote: LeadNote = {
@@ -179,21 +278,56 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.warn("⚠️ No file selected");
+      return;
+    }
+
+    console.log("📱 File selected on mobile:", {
+      name: file.name,
+      type: file.type || "(empty - common on iOS)",
+      size: `${(file.size / 1024).toFixed(2)} KB`,
+      lastModified: new Date(file.lastModified).toISOString(),
+    });
 
     setPendingSummary(null);
     setPendingTranscript(null);
     setErrorMsg(null);
+    setUploadProgress(0);
     setUploadStatus("uploading");
 
     try {
+      // Test proxy connection first
+      console.log("🔍 Testing proxy connection...");
+      try {
+        const testRes = await fetch(`${PROXY_URL}/api/transcribe`, {
+          method: "POST",
+          body: new FormData(),
+        });
+        console.log("✅ Proxy test response:", testRes.status);
+      } catch (testErr) {
+        console.warn("⚠️ Proxy test failed (may be expected):", testErr);
+      }
+
+      console.log("🚀 Starting transcription...");
       const transcript = await transcribeAudio(file);
+      console.log("✅ Transcription complete, length:", transcript.length);
+
+      setUploadProgress(50);
       setUploadStatus("processing");
+
+      console.log("🤖 Starting summarization...");
       const summary = await summarizeTranscript(transcript);
+      console.log("✅ Summarization complete, length:", summary.length);
+
+      setUploadProgress(100);
+
       setPendingTranscript(transcript);
       setPendingSummary(summary);
       setUploadStatus("done");
     } catch (err: any) {
+      console.error("💥 Upload error:", err);
+      console.error("💥 Error stack:", err.stack);
       setErrorMsg(err.message ?? "שגיאה לא ידועה");
       setUploadStatus("error");
     } finally {
@@ -215,12 +349,14 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
     setPendingSummary(null);
     setPendingTranscript(null);
     setUploadStatus("idle");
+    setUploadProgress(0);
   };
 
   const handleDiscard = () => {
     setPendingSummary(null);
     setPendingTranscript(null);
     setUploadStatus("idle");
+    setUploadProgress(0);
   };
 
   const handleDeleteSummary = (id: string) => {
@@ -277,12 +413,15 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="audio/*,video/mp4"
+                  accept=".m4a,audio/*,video/*"
                   className="hidden"
                   onChange={handleFileChange}
                 />
                 <button
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    console.log("📁 File input triggered");
+                    fileInputRef.current?.click();
+                  }}
                   className="w-full border-2 border-dashed border-purple-200 rounded-xl py-2.5 text-xs text-purple-500 hover:bg-purple-50 hover:border-purple-300 transition-colors font-medium"
                 >
                   + העלה הקלטת שיחה לתמלול אוטומטי
@@ -295,16 +434,26 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
               </>
             )}
 
-            {/* Loading */}
+            {/* Loading with progress */}
             {(uploadStatus === "uploading" ||
               uploadStatus === "processing") && (
-              <div className="flex items-center gap-3 bg-purple-50 border border-purple-100 rounded-xl px-4 py-3">
-                <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin shrink-0" />
-                <p className="text-xs text-purple-600 font-medium">
-                  {uploadStatus === "uploading"
-                    ? "מתמלל הקלטה..."
-                    : "מסכם עם AI..."}
-                </p>
+              <div className="bg-purple-50 border border-purple-100 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-4 h-4 border-2 border-purple-400 border-t-transparent rounded-full animate-spin shrink-0" />
+                  <p className="text-xs text-purple-600 font-medium">
+                    {uploadStatus === "uploading"
+                      ? "מתמלל הקלטה..."
+                      : "מסכם עם AI..."}
+                  </p>
+                </div>
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="mt-2 w-full bg-purple-200 rounded-full h-1.5">
+                    <div
+                      className="bg-purple-600 h-1.5 rounded-full transition-all duration-300"
+                      style={{ width: `${uploadProgress}%` }}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
