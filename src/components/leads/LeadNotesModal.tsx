@@ -20,76 +20,79 @@ type UploadStatus = "idle" | "uploading" | "processing" | "done" | "error";
 // ─── Proxy Configuration ──────────────────────────────────────────────────────
 const PROXY_URL = "https://nameless-water-1203.vaadabait68.workers.dev";
 
-// ─── Helper Functions ─────────────────────────────────────────────────────────
+// ─── Helper: Convert File to Base64 ──────────────────────────────────────────
 
 /**
- * Prepares a file for upload - especially important for mobile m4a files
- * iOS Safari often sends m4a files with empty content-type
+ * Converts a file to base64 - avoids FormData CORS issues on iOS
+ * The file content stays exactly the same, just encoded for transmission
  */
-function prepareFileForUpload(file: File): File {
-  console.log("📁 Original file:", {
-    name: file.name,
-    type: file.type || "(empty)",
-    size: `${(file.size / 1024).toFixed(2)} KB`,
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        // Remove the data URL prefix (e.g., "data:audio/mp4;base64,")
+        const base64 = reader.result.split(",")[1];
+        resolve(base64);
+      } else {
+        reject(new Error("Failed to convert file to base64"));
+      }
+    };
+    reader.onerror = (error) => reject(error);
   });
-
-  // If it's an m4a file with empty or incorrect content-type
-  if (file.name.toLowerCase().endsWith(".m4a")) {
-    // Create a new File with proper MIME type
-    const fixedFile = new File(
-      [file],
-      file.name,
-      { type: "audio/mp4" }, // Correct MIME type for m4a
-    );
-    console.log("📁 Fixed file:", {
-      name: fixedFile.name,
-      type: fixedFile.type,
-      size: `${(fixedFile.size / 1024).toFixed(2)} KB`,
-    });
-    return fixedFile;
-  }
-
-  // For other files, ensure they have a valid type
-  if (!file.type || file.type === "") {
-    // Try to guess from extension
-    let mimeType = "audio/mpeg";
-    const ext = file.name.toLowerCase().split(".").pop();
-    if (ext === "wav") mimeType = "audio/wav";
-    else if (ext === "mp3") mimeType = "audio/mpeg";
-    else if (ext === "m4a") mimeType = "audio/mp4";
-    else if (ext === "ogg") mimeType = "audio/ogg";
-    else if (ext === "mp4" || ext === "mov") mimeType = "video/mp4";
-
-    return new File([file], file.name, { type: mimeType });
-  }
-
-  return file;
 }
 
 // ─── API Functions ────────────────────────────────────────────────────────────
 
 async function transcribeAudio(file: File): Promise<string> {
-  // Prepare file for mobile
-  const preparedFile = prepareFileForUpload(file);
-
-  const formData = new FormData();
-  formData.append("file", preparedFile);
-  formData.append("model", "whisper-large-v3-turbo");
-  formData.append("language", "he");
-  formData.append("response_format", "json");
-
-  console.log("🚀 Sending to Cloudflare Worker...");
-  console.log(
-    "📤 FormData file:",
-    preparedFile.name,
-    preparedFile.type,
-    preparedFile.size,
-  );
+  console.log("📁 File details:", {
+    name: file.name,
+    type: file.type || "empty (iOS issue)",
+    size: `${(file.size / 1024).toFixed(2)} KB`,
+  });
 
   try {
-    const res = await fetch(`${PROXY_URL}/api/transcribe`, {
+    // Use base64 approach for iOS compatibility
+    // This keeps the file as M4A - no conversion!
+    console.log("🔄 Encoding M4A to base64 (no conversion, just encoding)...");
+    const base64Data = await fileToBase64(file);
+
+    // Determine the correct MIME type for M4A
+    let mimeType = file.type;
+    if (!mimeType || mimeType === "") {
+      if (file.name.toLowerCase().endsWith(".m4a")) {
+        mimeType = "audio/mp4"; // M4A is MP4 container with audio
+      } else if (file.name.toLowerCase().endsWith(".mp3")) {
+        mimeType = "audio/mpeg";
+      } else if (file.name.toLowerCase().endsWith(".wav")) {
+        mimeType = "audio/wav";
+      } else if (file.name.toLowerCase().endsWith(".ogg")) {
+        mimeType = "audio/ogg";
+      } else if (
+        file.name.toLowerCase().endsWith(".mp4") ||
+        file.name.toLowerCase().endsWith(".mov")
+      ) {
+        mimeType = "video/mp4";
+      } else {
+        mimeType = "audio/mpeg"; // fallback
+      }
+    }
+
+    console.log("📤 Sending M4A as base64 (original format, no conversion)...");
+
+    const res = await fetch(`${PROXY_URL}/api/transcribe-base64`, {
       method: "POST",
-      body: formData,
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        file: base64Data,
+        filename: file.name,
+        mimeType: mimeType,
+        model: "whisper-large-v3-turbo",
+        language: "he",
+      }),
     });
 
     console.log("📥 Response status:", res.status);
@@ -104,7 +107,6 @@ async function transcribeAudio(file: File): Promise<string> {
     console.log("✅ Groq response:", data);
 
     if (!data.text) {
-      console.error("❌ No text in response:", data);
       throw new Error("לא התקבל תמלול מהשרת");
     }
     return data.text;
@@ -253,9 +255,9 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Debug: Log when component mounts
   useEffect(() => {
-    console.log("📱 LeadNotesModal mounted, proxy URL:", PROXY_URL);
+    console.log("📱 LeadNotesModal mounted");
+    console.log("🔗 Proxy URL:", PROXY_URL);
   }, []);
 
   const handleAddNote = (message: string, author: string) => {
@@ -283,9 +285,9 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
       return;
     }
 
-    console.log("📱 File selected on mobile:", {
+    console.log("📱 File selected:", {
       name: file.name,
-      type: file.type || "(empty - common on iOS)",
+      type: file.type || "(empty - iOS issue)",
       size: `${(file.size / 1024).toFixed(2)} KB`,
       lastModified: new Date(file.lastModified).toISOString(),
     });
@@ -297,26 +299,12 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
     setUploadStatus("uploading");
 
     try {
-      // Test proxy connection first
-      console.log("🔍 Testing proxy connection...");
-      try {
-        const testRes = await fetch(`${PROXY_URL}/api/transcribe`, {
-          method: "POST",
-          body: new FormData(),
-        });
-        console.log("✅ Proxy test response:", testRes.status);
-      } catch (testErr) {
-        console.warn("⚠️ Proxy test failed (may be expected):", testErr);
-      }
-
-      console.log("🚀 Starting transcription...");
       const transcript = await transcribeAudio(file);
       console.log("✅ Transcription complete, length:", transcript.length);
 
       setUploadProgress(50);
       setUploadStatus("processing");
 
-      console.log("🤖 Starting summarization...");
       const summary = await summarizeTranscript(transcript);
       console.log("✅ Summarization complete, length:", summary.length);
 
@@ -327,7 +315,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
       setUploadStatus("done");
     } catch (err: any) {
       console.error("💥 Upload error:", err);
-      console.error("💥 Error stack:", err.stack);
       setErrorMsg(err.message ?? "שגיאה לא ידועה");
       setUploadStatus("error");
     } finally {
