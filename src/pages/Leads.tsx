@@ -119,6 +119,17 @@ const STATUS_ORDER: Record<string, number> = {
   irrelevant: 6,
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function toTelHref(phone: string) {
+  return `tel:${phone.replace(/[\s\-().]/g, "")}`;
+}
+
+function isOverdue(dateStr?: string) {
+  if (!dateStr) return false;
+  return new Date(dateStr) < new Date();
+}
+
 // ─── Sort types ───────────────────────────────────────────────────────────────
 
 type SortKey =
@@ -134,13 +145,6 @@ type SortKey =
   | null;
 
 type SortDir = "asc" | "desc";
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isOverdue(dateStr?: string) {
-  if (!dateStr) return false;
-  return new Date(dateStr) < new Date();
-}
 
 function sortLeads(leads: Lead[], key: SortKey, dir: SortDir): Lead[] {
   if (!key) return leads;
@@ -284,7 +288,9 @@ function LeadTableView({
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   {lead.phone ? (
                     <a
-                      href={`tel:${lead.phone}`}
+                      href={toTelHref(lead.phone)}
+                      onClick={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
                       className="flex items-center gap-1 text-green-700 font-mono text-xs bg-green-50 border border-green-200 rounded-lg px-2 py-1 hover:bg-green-100 whitespace-nowrap"
                     >
                       📞 {lead.phone}
@@ -415,8 +421,9 @@ function LeadMobileList({
               {/* Phone — big tap-to-call */}
               {lead.phone && (
                 <a
-                  href={`tel:${lead.phone}`}
+                  href={toTelHref(lead.phone)}
                   onClick={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
                   className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 text-sm font-semibold mb-3 active:bg-green-100 transition-colors"
                 >
                   📞 {lead.phone}
@@ -743,7 +750,10 @@ export default function Leads() {
                                     <div onClick={(e) => e.stopPropagation()}>
                                       {lead.phone && (
                                         <a
-                                          href={`tel:${lead.phone}`}
+                                          href={toTelHref(lead.phone)}
+                                          onTouchEnd={(e) =>
+                                            e.stopPropagation()
+                                          }
                                           className="text-xs text-green-700 mt-0.5 block"
                                         >
                                           📞 {lead.phone}

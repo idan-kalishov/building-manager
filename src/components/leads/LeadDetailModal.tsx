@@ -11,6 +11,13 @@ interface Props {
   onEdit: () => void;
 }
 
+interface CallSummary {
+  id: string;
+  timestamp: string;
+  summary: string;
+  transcript: string;
+}
+
 const PRIORITY_LABEL: Record<LeadPriority, string> = {
   high: "🔴 גבוהה",
   medium: "🟡 בינונית",
@@ -29,6 +36,17 @@ const STATUS_LABEL: Record<string, string> = {
 function isOverdue(dateStr?: string) {
   if (!dateStr) return false;
   return new Date(dateStr) < new Date();
+}
+
+function formatDate(iso: string) {
+  const d = new Date(iso);
+  return d.toLocaleDateString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 // Simple text row
@@ -56,15 +74,72 @@ const PhoneRow = ({ phone }: { phone?: string }) =>
     </div>
   ) : null;
 
+function CallSummaryCard({ summary }: { summary: CallSummary }) {
+  const [expanded, setExpanded] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  const previewLine =
+    summary.summary
+      .split("\n")
+      .find(
+        (l) =>
+          l.trim() &&
+          !l.startsWith("✅") &&
+          !l.startsWith("📅") &&
+          !l.startsWith("🔔"),
+      ) ?? "סיכום שיחה";
+
+  return (
+    <div className="bg-white border border-purple-100 rounded-xl overflow-hidden shadow-sm">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 px-4 py-3 text-right hover:bg-purple-50/40 transition-colors"
+      >
+        <span className="text-purple-400 text-lg shrink-0">🎙️</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-700 truncate">
+            {previewLine}
+          </p>
+          <p className="text-[11px] text-gray-400 mt-0.5">
+            {formatDate(summary.timestamp)}
+          </p>
+        </div>
+        <span className="text-gray-300 text-sm shrink-0">
+          {expanded ? "▲" : "▼"}
+        </span>
+      </button>
+
+      {expanded && (
+        <div className="px-4 pb-4 border-t border-purple-50">
+          <div className="mt-3 text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {summary.summary}
+          </div>
+          <button
+            onClick={() => setShowTranscript((v) => !v)}
+            className="mt-3 text-[11px] text-purple-500 hover:text-purple-700 underline underline-offset-2 transition-colors"
+          >
+            {showTranscript ? "הסתר תמלול" : "הצג תמלול מלא"}
+          </button>
+          {showTranscript && (
+            <div className="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-3 text-[11px] text-gray-500 leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
+              {summary.transcript}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
   const overdue = isOverdue(lead.followUpDate);
   const [showAddField, setShowAddField] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-  // Local notes state — synced to Firestore on each add
   const [notesList, setNotesList] = useState<LeadNote[]>(
     (lead as any).notesList ?? [],
   );
+  const callSummaries: CallSummary[] = (lead as any).callSummaries ?? [];
 
   const handleDelete = async () => {
     await deleteLead(lead.id!);
@@ -214,7 +289,26 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <Row label="המשך טיפול" value={lead.followUpNotes} />
           </section>
 
-          {/* ── Notes section (new multi-note system) ── */}
+          {/* ── Call Summaries (read-only) ── */}
+          {callSummaries.length > 0 && (
+            <section>
+              <div className="flex items-center justify-between border-b pb-1 mb-3">
+                <h3 className="font-bold text-gray-700 text-sm">
+                  🎙️ שיחות מוקלטות
+                </h3>
+                <span className="text-[11px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
+                  {callSummaries.length}
+                </span>
+              </div>
+              <div className="space-y-2">
+                {callSummaries.map((s) => (
+                  <CallSummaryCard key={s.id} summary={s} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* ── Notes ── */}
           <LeadNoteSection
             notes={notesList}
             onAddNote={handleAddNote}
