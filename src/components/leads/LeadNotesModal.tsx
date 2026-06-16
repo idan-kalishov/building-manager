@@ -22,17 +22,12 @@ const PROXY_URL = "https://nameless-water-1203.vaadabait68.workers.dev";
 
 // ─── Helper: Convert File to Base64 ──────────────────────────────────────────
 
-/**
- * Converts a file to base64 - avoids FormData CORS issues on iOS
- * The file content stays exactly the same, just encoded for transmission
- */
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => {
       if (typeof reader.result === "string") {
-        // Remove the data URL prefix (e.g., "data:audio/mp4;base64,")
         const base64 = reader.result.split(",")[1];
         resolve(base64);
       } else {
@@ -53,33 +48,24 @@ async function transcribeAudio(file: File): Promise<string> {
   });
 
   try {
-    // Use base64 approach for iOS compatibility
-    // This keeps the file as M4A - no conversion!
-    console.log("🔄 Encoding M4A to base64 (no conversion, just encoding)...");
+    // Convert to base64 - this avoids FormData CORS issues on mobile
     const base64Data = await fileToBase64(file);
 
-    // Determine the correct MIME type for M4A
+    // Determine MIME type for M4A
     let mimeType = file.type;
     if (!mimeType || mimeType === "") {
       if (file.name.toLowerCase().endsWith(".m4a")) {
-        mimeType = "audio/mp4"; // M4A is MP4 container with audio
+        mimeType = "audio/mp4";
       } else if (file.name.toLowerCase().endsWith(".mp3")) {
         mimeType = "audio/mpeg";
       } else if (file.name.toLowerCase().endsWith(".wav")) {
         mimeType = "audio/wav";
-      } else if (file.name.toLowerCase().endsWith(".ogg")) {
-        mimeType = "audio/ogg";
-      } else if (
-        file.name.toLowerCase().endsWith(".mp4") ||
-        file.name.toLowerCase().endsWith(".mov")
-      ) {
-        mimeType = "video/mp4";
       } else {
-        mimeType = "audio/mpeg"; // fallback
+        mimeType = "audio/mpeg";
       }
     }
 
-    console.log("📤 Sending M4A as base64 (original format, no conversion)...");
+    console.log("📤 Sending to proxy via base64...");
 
     const res = await fetch(`${PROXY_URL}/api/transcribe-base64`, {
       method: "POST",
@@ -97,14 +83,14 @@ async function transcribeAudio(file: File): Promise<string> {
 
     console.log("📥 Response status:", res.status);
 
+    const responseText = await res.text();
+    console.log("📥 Response body:", responseText);
+
     if (!res.ok) {
-      const errorText = await res.text();
-      console.error("❌ Error response:", errorText);
-      throw new Error(`תמלול נכשל: ${errorText}`);
+      throw new Error(`תמלול נכשל: ${responseText}`);
     }
 
-    const data = await res.json();
-    console.log("✅ Groq response:", data);
+    const data = JSON.parse(responseText);
 
     if (!data.text) {
       throw new Error("לא התקבל תמלול מהשרת");
@@ -289,7 +275,6 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
       name: file.name,
       type: file.type || "(empty - iOS issue)",
       size: `${(file.size / 1024).toFixed(2)} KB`,
-      lastModified: new Date(file.lastModified).toISOString(),
     });
 
     setPendingSummary(null);
