@@ -11,6 +11,7 @@ import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import BuildingDetail from "./pages/BuildingDetail";
 import ContactsImport from "./pages/ContactsImport";
+import Suppliers from "./components/suppliers/Suppliers";
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="buildings/:id" element={<BuildingDetail />} />
           <Route path="leads" element={<Leads />} />
           <Route path="contacts-import" element={<ContactsImport />} />
+          <Route path="suppliers" element={<Suppliers />} />
         </Route>
       </Routes>
     </BrowserRouter>

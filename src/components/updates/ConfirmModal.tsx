@@ -1,3 +1,4 @@
+// components/ConfirmModal.tsx
 interface ConfirmModalProps {
   title: string;
   message?: string;

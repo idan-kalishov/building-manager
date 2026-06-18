@@ -1,3 +1,4 @@
+// lib/tasks.service.ts
 import { db } from "./firebase";
 import {
   collection,
@@ -20,7 +21,14 @@ export const subscribeTasks = (cb: (tasks: Task[]) => void) =>
   );
 
 export const addTask = (data: Omit<Task, "id">) =>
-  addDoc(collection(db, COL), { ...data, createdAt: serverTimestamp() });
+  addDoc(collection(db, COL), {
+    ...data,
+    createdAt: serverTimestamp(),
+    done: data.done || false,
+    updates: data.updates || [],
+    contactPersons: data.contactPersons || [],
+    notes: data.notes || "",
+  });
 
 export const updateTask = (id: string, data: Partial<Task>) =>
   updateDoc(doc(db, COL, id), data);

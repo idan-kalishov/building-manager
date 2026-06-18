@@ -15,6 +15,7 @@ export default function Layout() {
     { path: "/", label: "משימות", icon: "📋", exact: true },
     { path: "/buildings", label: "בניינים", icon: "🏗️" },
     { path: "/leads", label: "לידים", icon: "📌" },
+    { path: "/suppliers", label: "ספקים", icon: "🔧" },
     { path: "/contacts-import", label: "ייצוא לג'ימייל", icon: "📤" },
   ];
 

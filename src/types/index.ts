@@ -1,3 +1,4 @@
+// types.ts
 export type LeadStatus =
   | "new"
   | "contacted"
@@ -19,6 +20,14 @@ export interface TaskUpdate {
   newDueDate?: string;
 }
 
+export interface ContactPerson {
+  id: string;
+  name: string;
+  phone: string;
+  role?: string;
+  notes?: string;
+}
+
 export interface Task {
   id?: string;
   title: string;
@@ -29,6 +38,10 @@ export interface Task {
   done?: boolean;
   createdAt?: any;
   updates?: TaskUpdate[];
+  contactPersons?: ContactPerson[];
+  notes?: string;
+  supplierId?: string; // קישור לספק
+  supplierName?: string; // שם הספק (להצגה מהירה)
 }
 
 export interface LeadNote {
@@ -108,15 +121,43 @@ export interface Building {
   municipality?: Record<string, any>;
   committee?: Record<string, any>;
   culturalAssociation?: Record<string, any>;
-  /** @deprecated use customSectionValues instead */
   customSections?: {
     id: string;
     title: string;
     fields: { id: string; label: string; value: string }[];
   }[];
-  /**
-   * Per-building field values for global custom sections.
-   * customSectionValues[sectionId][fieldId] = value
-   */
   customSectionValues?: Record<string, Record<string, string>>;
 }
+
+// types.ts - הוסף את זה בסוף הקובץ
+
+export type SupplierCategory =
+  | "elevator" // מעליות
+  | "electricity" // חשמל
+  | "plumbing" // אינסטלציה
+  | "cleaning" // ניקיון
+  | "gardening" // גינון
+  | "security" // אבטחה
+  | "construction" // בניה
+  | "air_conditioning" // מיזוג
+  | "it" // IT
+  | "other"; // אחר
+
+export interface Supplier {
+  id?: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  category: SupplierCategory;
+  contactPerson?: string;
+  notes?: string;
+  website?: string;
+  createdAt?: any;
+  updatedAt?: any;
+  isActive?: boolean;
+  rating?: 1 | 2 | 3 | 4 | 5;
+  tasksCount?: number; // מספר משימות מקושרות
+}
+
+// עדכן את Task

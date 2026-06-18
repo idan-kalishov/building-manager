@@ -1,3 +1,4 @@
+// Dashboard.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
   subscribeTasks,
@@ -6,7 +7,11 @@ import {
   deleteTask,
 } from "../lib/tasks.service";
 import type { Task, TaskPriority, TaskUpdate, Technician } from "../types";
+import type { ContactPerson } from "../types";
 import ConfirmModal from "../components/ConfirmModal";
+import ContactPersonsSection from "../components/ContactPersonsSection";
+import AddUpdateForm from "../components/updates/AddUpdateForm.tsx";
+import SupplierSelector from "../components/suppliers/SupplierSelector.tsx";
 
 const PRIORITY_CONFIG: Record<
   TaskPriority,
@@ -53,8 +58,6 @@ const TECHNICIAN_ICONS: Record<Technician, string> = {
   אחר: "👤",
 };
 
-const TECHNICIANS: Technician[] = ["גדי", "עידן", "אחר"];
-
 function isOverdue(dateStr?: string, done?: boolean) {
   if (!dateStr || done) return false;
   return new Date(dateStr) < new Date(new Date().toDateString());
@@ -68,6 +71,8 @@ function isToday(dateStr?: string) {
 const EMPTY_TASK: Partial<Task> = {
   priority: "medium",
   updates: [],
+  contactPersons: [],
+  notes: "",
 };
 
 export default function Dashboard() {
@@ -87,9 +92,6 @@ export default function Dashboard() {
     updateId: string;
   } | null>(null);
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  const [updateMessage, setUpdateMessage] = useState("");
-  const [selectedTechnician, setSelectedTechnician] =
-    useState<Technician>("גדי");
   const [showAddUpdateForTask, setShowAddUpdateForTask] = useState<
     string | null
   >(null);
@@ -97,6 +99,10 @@ export default function Dashboard() {
     taskId: string;
     update: TaskUpdate;
   } | null>(null);
+  const [contactPersons, setContactPersons] = useState<ContactPerson[]>([]);
+  const [taskNotes, setTaskNotes] = useState("");
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
+  const [selectedSupplierName, setSelectedSupplierName] = useState<string>("");
 
   useEffect(() => {
     const unsub = subscribeTasks(setTasks);
@@ -106,12 +112,20 @@ export default function Dashboard() {
   const openAdd = () => {
     setEditing(null);
     setForm(EMPTY_TASK);
+    setContactPersons([]);
+    setTaskNotes("");
+    setSelectedSupplierId("");
+    setSelectedSupplierName("");
     setShowForm(true);
   };
 
   const openEdit = (task: Task) => {
     setEditing(task);
     setForm({ ...task });
+    setContactPersons(task.contactPersons || []);
+    setTaskNotes(task.notes || "");
+    setSelectedSupplierId(task.supplierId || "");
+    setSelectedSupplierName(task.supplierName || "");
     setShowForm(true);
   };
 
@@ -121,6 +135,10 @@ export default function Dashboard() {
     const taskData = {
       ...form,
       updates: form.updates || [],
+      contactPersons: contactPersons,
+      notes: taskNotes,
+      supplierId: selectedSupplierId,
+      supplierName: selectedSupplierName,
     };
 
     if (editing?.id) {
@@ -130,6 +148,10 @@ export default function Dashboard() {
     }
     setShowForm(false);
     setForm(EMPTY_TASK);
+    setContactPersons([]);
+    setTaskNotes("");
+    setSelectedSupplierId("");
+    setSelectedSupplierName("");
     setEditing(null);
   };
 
@@ -147,8 +169,39 @@ export default function Dashboard() {
     setConfirm(null);
   };
 
-  const handleAddUpdate = async (taskId: string) => {
-    if (!updateMessage.trim()) {
+  const handleAddUpdate = async (
+    taskId: string,
+    updateData: Omit<TaskUpdate, "id" | "timestamp">,
+  ) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+
+    const newUpdate: TaskUpdate = {
+      id: Date.now().toString(),
+      ...updateData,
+      timestamp: new Date().toISOString(),
+    };
+
+    // If due date was updated, update the task's dueDate
+    const updatedTask: any = {
+      ...task,
+      updates: [...(task.updates || []), newUpdate],
+    };
+
+    if (updateData.newDueDate) {
+      updatedTask.dueDate = updateData.newDueDate;
+    }
+
+    await updateTask(taskId, updatedTask);
+    setShowAddUpdateForTask(null);
+  };
+
+  const handleEditUpdate = async () => {
+    if (!editingUpdate) return;
+
+    const { taskId, update } = editingUpdate;
+
+    if (!update.message.trim()) {
       alert("אנא הזן תוכן עדכון");
       return;
     }
@@ -156,49 +209,19 @@ export default function Dashboard() {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
 
-    const newUpdate: TaskUpdate = {
-      id: Date.now().toString(),
-      technician: selectedTechnician,
-      message: updateMessage.trim(),
-      timestamp: new Date().toISOString(),
-    };
-
-    const updatedTask = {
-      ...task,
-      updates: [...(task.updates || []), newUpdate],
-    };
-
-    await updateTask(taskId, updatedTask);
-    setUpdateMessage("");
-    setSelectedTechnician("גדי");
-    setShowAddUpdateForTask(null);
-  };
-
-  const handleEditUpdate = async () => {
-    if (!editingUpdate) return;
-    if (!updateMessage.trim()) {
-      alert("אנא הזן תוכן עדכון");
-      return;
-    }
-
-    const task = tasks.find((t) => t.id === editingUpdate.taskId);
-    if (!task) return;
-
     const updatedUpdates = task.updates?.map((u) =>
-      u.id === editingUpdate.update.id
+      u.id === update.id
         ? {
             ...u,
-            message: updateMessage.trim(),
-            technician: selectedTechnician,
-            timestamp: new Date().toISOString(), // מעדכן גם את התאריך
+            message: update.message.trim(),
+            technician: update.technician,
+            timestamp: new Date().toISOString(),
           }
         : u,
     );
 
-    await updateTask(editingUpdate.taskId, { updates: updatedUpdates });
+    await updateTask(taskId, { updates: updatedUpdates });
     setEditingUpdate(null);
-    setUpdateMessage("");
-    setSelectedTechnician("גדי");
   };
 
   const handleDeleteUpdate = async () => {
@@ -216,21 +239,28 @@ export default function Dashboard() {
 
   const startEditUpdate = (taskId: string, update: TaskUpdate) => {
     setEditingUpdate({ taskId, update });
-    setUpdateMessage(update.message);
-    setSelectedTechnician(update.technician);
     setShowAddUpdateForTask(null);
   };
 
   const cancelEditUpdate = () => {
     setEditingUpdate(null);
-    setUpdateMessage("");
-    setSelectedTechnician("גדי");
   };
 
   const toggleExpand = (taskId: string) => {
     setExpandedTaskId(expandedTaskId === taskId ? null : taskId);
     setShowAddUpdateForTask(null);
     setEditingUpdate(null);
+  };
+
+  const updateEditingUpdate = (field: keyof TaskUpdate, value: any) => {
+    if (!editingUpdate) return;
+    setEditingUpdate({
+      ...editingUpdate,
+      update: {
+        ...editingUpdate.update,
+        [field]: value,
+      },
+    });
   };
 
   const stats = useMemo(
@@ -416,7 +446,41 @@ export default function Dashboard() {
                     <span className={`text-xs font-medium ${pri.text}`}>
                       {pri.label}
                     </span>
+                    {/* Supplier Display */}
+                    {task.supplierName && (
+                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                        🔧 {task.supplierName}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Contact Persons Display */}
+                  {task.contactPersons && task.contactPersons.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {task.contactPersons.map((person) => (
+                        <span
+                          key={person.id}
+                          className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full"
+                        >
+                          👤 {person.name}
+                          <span className="text-gray-400">|</span>
+                          📞 {person.phone}
+                          {person.role && (
+                            <span className="text-gray-400 text-[10px]">
+                              ({person.role})
+                            </span>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Notes Display */}
+                  {task.notes && (
+                    <div className="mt-1 text-xs text-gray-500 border-r-2 border-gray-300 pr-2">
+                      📝 {task.notes}
+                    </div>
+                  )}
                 </div>
 
                 {/* Actions - stop propagation */}
@@ -480,44 +544,19 @@ export default function Dashboard() {
                       )}
                     </div>
 
-                    {/* Add Update Form */}
+                    {/* Add Update Form - Using the new component */}
                     {showAddForm && !task.done && !isEditing && (
-                      <div className="bg-white rounded-lg p-3 space-y-3 border">
-                        <div className="flex gap-2">
-                          {TECHNICIANS.map((tech) => (
-                            <button
-                              key={tech}
-                              type="button"
-                              onClick={() => setSelectedTechnician(tech)}
-                              className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all
-                                ${
-                                  selectedTechnician === tech
-                                    ? "bg-blue-600 text-white"
-                                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                                }`}
-                            >
-                              {TECHNICIAN_ICONS[tech]} {tech}
-                            </button>
-                          ))}
-                        </div>
-                        <textarea
-                          value={updateMessage}
-                          onChange={(e) => setUpdateMessage(e.target.value)}
-                          placeholder="תאר מה בוצע, מה נמצא, או סטטוס עדכני..."
-                          rows={2}
-                          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
-                        />
-                        <button
-                          onClick={() => handleAddUpdate(task.id!)}
-                          className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 text-sm font-medium"
-                        >
-                          שמור עדכון
-                        </button>
-                      </div>
+                      <AddUpdateForm
+                        currentDueDate={task.dueDate}
+                        onAddUpdate={(updateData) =>
+                          handleAddUpdate(task.id!, updateData)
+                        }
+                        onCancel={() => setShowAddUpdateForTask(null)}
+                      />
                     )}
 
                     {/* Edit Update Form */}
-                    {isEditing && (
+                    {isEditing && editingUpdate && (
                       <div className="bg-white rounded-lg p-3 space-y-3 border border-yellow-400">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-yellow-600">
@@ -531,25 +570,34 @@ export default function Dashboard() {
                           </button>
                         </div>
                         <div className="flex gap-2">
-                          {TECHNICIANS.map((tech) => (
+                          {["גדי", "עידן", "אחר"].map((tech) => (
                             <button
                               key={tech}
                               type="button"
-                              onClick={() => setSelectedTechnician(tech)}
+                              onClick={() =>
+                                updateEditingUpdate(
+                                  "technician",
+                                  tech as Technician,
+                                )
+                              }
                               className={`flex-1 py-1.5 rounded-lg text-sm font-medium transition-all
                                 ${
-                                  selectedTechnician === tech
+                                  editingUpdate.update.technician === tech
                                     ? "bg-blue-600 text-white"
                                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                 }`}
                             >
-                              {TECHNICIAN_ICONS[tech]} {tech}
+                              {tech === "גדי" && "👨‍🔧"}
+                              {tech === "עידן" && "👷"}
+                              {tech === "אחר" && "👤"} {tech}
                             </button>
                           ))}
                         </div>
                         <textarea
-                          value={updateMessage}
-                          onChange={(e) => setUpdateMessage(e.target.value)}
+                          value={editingUpdate.update.message}
+                          onChange={(e) =>
+                            updateEditingUpdate("message", e.target.value)
+                          }
                           rows={2}
                           className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                         />
@@ -587,6 +635,11 @@ export default function Dashboard() {
                                     "he-IL",
                                   )}
                                 </span>
+                                {update.oldDueDate && update.newDueDate && (
+                                  <span className="text-xs bg-yellow-50 text-yellow-700 px-1.5 py-0.5 rounded-full">
+                                    📅 תאריך עודכן
+                                  </span>
+                                )}
                               </div>
                               {!task.done && !isEditing && (
                                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -615,6 +668,16 @@ export default function Dashboard() {
                               )}
                             </div>
                             <p className="text-gray-700">{update.message}</p>
+                            {update.oldDueDate && update.newDueDate && (
+                              <div className="text-xs text-gray-500 bg-gray-50 rounded p-1.5 mt-1">
+                                <span className="line-through text-red-500 ml-2">
+                                  {update.oldDueDate}
+                                </span>
+                                <span className="text-green-600 font-medium">
+                                  → {update.newDueDate}
+                                </span>
+                              </div>
+                            )}
                           </div>
                         ))
                       )}
@@ -636,7 +699,7 @@ export default function Dashboard() {
             if (e.target === e.currentTarget) setShowForm(false);
           }}
         >
-          <div className="bg-white rounded-2xl w-full max-w-md flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-4 border-b">
               <h2 className="text-lg font-bold">
                 {editing ? "עריכת משימה" : "משימה חדשה"}
@@ -649,7 +712,7 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto flex-1">
               <div className="flex flex-col gap-1">
                 <label className="text-sm font-medium text-gray-600">
                   כותרת *
@@ -727,6 +790,41 @@ export default function Dashboard() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Supplier Selector */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">
+                  🔧 ספק
+                </label>
+                <SupplierSelector
+                  selectedSupplierId={selectedSupplierId}
+                  onSelect={(id: any, name: any) => {
+                    setSelectedSupplierId(id);
+                    setSelectedSupplierName(name);
+                  }}
+                  placeholder="חפש או בחר ספק..."
+                />
+              </div>
+
+              {/* Contact Persons Section */}
+              <ContactPersonsSection
+                contactPersons={contactPersons}
+                onChange={setContactPersons}
+              />
+
+              {/* Notes Section */}
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">
+                  📝 הערות
+                </label>
+                <textarea
+                  value={taskNotes}
+                  onChange={(e) => setTaskNotes(e.target.value)}
+                  placeholder="הוסף הערות כלליות למשימה..."
+                  rows={2}
+                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                />
               </div>
             </div>
 
