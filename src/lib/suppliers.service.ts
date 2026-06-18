@@ -12,7 +12,6 @@ import {
   where,
   getDocs,
   serverTimestamp,
-  Timestamp,
 } from "firebase/firestore";
 import type { Supplier } from "../types";
 
