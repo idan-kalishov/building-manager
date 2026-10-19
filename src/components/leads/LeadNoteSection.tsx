@@ -10,6 +10,9 @@ export interface LeadNote {
   timestamp: string;
   author: string;
   message: string;
+  // תמיכה לאחור בהערות שיובאו מאקסל
+  createdAt?: string;
+  text?: string;
 }
 
 interface Props {
@@ -31,6 +34,19 @@ const AUTHOR_BAR: Record<string, string> = {
   עידן: "border-purple-400",
   אחר: "border-gray-300",
 };
+
+function formatNoteDate(dateStr?: string) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString("he-IL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export default function LeadNoteSection({
   notes,
@@ -169,46 +185,48 @@ export default function LeadNoteSection({
             אין הערות עדיין — לחץ 🎤 לדיקטציה קולית
           </p>
         ) : (
-          [...notes].reverse().map((note) => (
-            <div
-              key={note.id}
-              className={`bg-white rounded-lg p-3 text-sm border border-gray-100 border-r-4 ${
-                AUTHOR_BAR[note.author] ?? "border-gray-300"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1.5">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
-                    AUTHOR_COLORS[note.author] ??
-                    "bg-gray-100 text-gray-700 border-gray-200"
-                  }`}
-                >
-                  {note.author}
-                </span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-gray-400">
-                    {new Date(note.timestamp).toLocaleString("he-IL", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+          [...notes].reverse().map((note) => {
+            const displayAuthor = note.author || "אחר";
+            const displayMessage = note.message || note.text || "";
+            const displayTime = formatNoteDate(
+              note.timestamp || note.createdAt,
+            );
+
+            return (
+              <div
+                key={note.id}
+                className={`bg-white rounded-lg p-3 text-sm border border-gray-100 border-r-4 ${
+                  AUTHOR_BAR[displayAuthor] ?? "border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium border ${
+                      AUTHOR_COLORS[displayAuthor] ??
+                      "bg-gray-100 text-gray-700 border-gray-200"
+                    }`}
+                  >
+                    {displayAuthor}
                   </span>
-                  {onDeleteNote && (
-                    <button
-                      onClick={() => onDeleteNote(note.id)}
-                      title="מחק הערה"
-                      className="text-gray-300 hover:text-red-500 transition-colors text-sm leading-none"
-                    >
-                      ✕
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400">{displayTime}</span>
+                    {onDeleteNote && (
+                      <button
+                        onClick={() => onDeleteNote(note.id)}
+                        title="מחק הערה"
+                        className="text-gray-300 hover:text-red-500 transition-colors text-sm leading-none"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
                 </div>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {displayMessage}
+                </p>
               </div>
-              <p className="text-gray-700 leading-relaxed">{note.message}</p>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>

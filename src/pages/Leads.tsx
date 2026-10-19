@@ -186,7 +186,6 @@ function parseSheetRowsToLeads(
       ? String(row["עלות גינון + מספר פעמים"]).trim()
       : undefined;
 
-    // ב"לא רלוונטי" לפעמים ההערות יושבות תחת "מקצוע" והתאריך תחת "תאריך שליחת ההצעה"
     const notesParts: string[] = [];
     if (row["הערות"]) notesParts.push(String(row["הערות"]).trim());
     if (isIrrelevantSheet && row["מקצוע"] && String(row["מקצוע"]).length > 20) {
@@ -280,12 +279,14 @@ function parseSheetRowsToLeads(
       customFields: customFields.length > 0 ? customFields : undefined,
     };
 
+    // מותאם בדיוק למבנה של LeadNoteSection: { id, timestamp, author, message }
     if (notes) {
       (leadObj as any).notesList = [
         {
           id: crypto.randomUUID(),
-          text: notes,
-          createdAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
+          author: "גדי",
+          message: notes,
         },
       ];
     }
