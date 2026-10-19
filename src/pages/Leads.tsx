@@ -1,4 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
+import * as XLSX from "xlsx";
 import {
   DragDropContext,
   Droppable,
@@ -10,6 +11,7 @@ import {
   updateLead,
   deleteLead,
   getOrderBetween,
+  bulkAddLeads,
 } from "../lib/leads.service";
 import { useLeadsStore } from "../store/leadsStore";
 import type { Lead, LeadStatus, LeadPriority } from "../types";
@@ -118,6 +120,181 @@ const STATUS_ORDER: Record<string, number> = {
   closed: 5,
   irrelevant: 6,
 };
+
+// ─── Excel Helpers ────────────────────────────────────────────────────────────
+
+function formatExcelDate(val: any): string | undefined {
+  if (!val) return undefined;
+  if (val instanceof Date && !isNaN(val.getTime())) {
+    return val.toISOString().split("T")[0];
+  }
+  if (typeof val === "number" && val > 20000 && val < 60000) {
+    const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+    if (!isNaN(d.getTime())) return d.toISOString().split("T")[0];
+  }
+  const str = String(val).trim();
+  const dmy = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  if (dmy) {
+    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
+  const ymd = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (ymd) return ymd[0];
+  return undefined;
+}
+
+function parseNumberField(val: any): number | undefined {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (typeof val === "number") return val;
+  const match = String(val).match(/\d+/);
+  return match ? Number(match[0]) : undefined;
+}
+
+function parseSheetRowsToLeads(
+  rows: Record<string, any>[],
+  sheetName: string,
+): Omit<Lead, "id">[] {
+  const result: Omit<Lead, "id">[] = [];
+  const isIrrelevantSheet = sheetName.includes("לא רלוונטי");
+  const isStreetSheet =
+    !sheetName.includes("תבנית") &&
+    !sheetName.includes("תל אביב") &&
+    !isIrrelevantSheet;
+
+  for (const row of rows) {
+    const rawAddress = row["כתובת"] || row["מספר בניין"] || "";
+    if (!rawAddress && !row["ועד הבית"] && !row["טלפון"]) continue;
+
+    const address =
+      isStreetSheet && rawAddress && !String(rawAddress).includes(sheetName)
+        ? `${sheetName} ${String(rawAddress).trim()}`
+        : String(rawAddress).trim();
+
+    const name = String(row["ועד הבית"] || "").trim() || `ועד בית - ${address}`;
+    const phone = String(row["טלפון"] || "").trim() || "—";
+    const email = String(row["אימייל"] || "").trim();
+    const currentCompany = String(row["חברה מתחרה"] || "").trim();
+
+    const tenantsRaw = row["מספר דיירים"];
+    const tenantsCount = parseNumberField(tenantsRaw);
+
+    const currentCost = parseNumberField(row["עלות"]);
+    const managementCost = parseNumberField(row["עלות חברת ניהול"]);
+    const cleaningCost = row["עלות ניקיון + מספר פעמים"]
+      ? String(row["עלות ניקיון + מספר פעמים"]).trim()
+      : undefined;
+    const gardeningCost = row["עלות גינון + מספר פעמים"]
+      ? String(row["עלות גינון + מספר פעמים"]).trim()
+      : undefined;
+
+    // ב"לא רלוונטי" לפעמים ההערות יושבות תחת "מקצוע" והתאריך תחת "תאריך שליחת ההצעה"
+    const notesParts: string[] = [];
+    if (row["הערות"]) notesParts.push(String(row["הערות"]).trim());
+    if (isIrrelevantSheet && row["מקצוע"] && String(row["מקצוע"]).length > 20) {
+      notesParts.push(String(row["מקצוע"]).trim());
+    }
+    const notes = notesParts.join("\n");
+
+    const followUpDate =
+      formatExcelDate(row["המשך טיפול.1"]) ||
+      formatExcelDate(row["המשך טיפול"]) ||
+      (isIrrelevantSheet
+        ? formatExcelDate(row["תאריך שליחת ההצעה"])
+        : undefined);
+
+    const proposalDate = !isIrrelevantSheet
+      ? formatExcelDate(row["תאריך שליחת ההצעה"])
+      : undefined;
+
+    let status: LeadStatus = isIrrelevantSheet ? "irrelevant" : "new";
+    if (!isIrrelevantSheet) {
+      if (proposalDate || managementCost) status = "proposal";
+      else if (notes) status = "contacted";
+    }
+
+    const confirmStr = String(row["וידוא קבלת ההצעה"] || "").trim();
+    let proposalConfirmed: boolean | undefined = undefined;
+    if (
+      confirmStr.includes("קיבל") ||
+      confirmStr.includes("אישר") ||
+      confirmStr.includes("כן")
+    ) {
+      proposalConfirmed = true;
+    } else if (confirmStr.includes("לא")) {
+      proposalConfirmed = false;
+    }
+
+    const customFields: { id: string; label: string; value: string }[] = [];
+    if (row["דירה"]) {
+      customFields.push({
+        id: crypto.randomUUID(),
+        label: "דירה",
+        value: String(row["דירה"]).trim(),
+      });
+    }
+    if (
+      tenantsRaw &&
+      typeof tenantsRaw === "string" &&
+      isNaN(Number(tenantsRaw))
+    ) {
+      customFields.push({
+        id: crypto.randomUUID(),
+        label: "פירוט דיירים",
+        value: tenantsRaw.trim(),
+      });
+    }
+    if (row["סיבת חוסר הרלוונטיות"]) {
+      customFields.push({
+        id: crypto.randomUUID(),
+        label: "סיבת אי-רלוונטיות",
+        value: String(row["סיבת חוסר הרלוונטיות"]).trim(),
+      });
+    }
+    if (
+      row["מקצוע"] &&
+      (!isIrrelevantSheet || String(row["מקצוע"]).length <= 20) &&
+      !(row["מקצוע"] instanceof Date)
+    ) {
+      customFields.push({
+        id: crypto.randomUUID(),
+        label: "מקצוע",
+        value: String(row["מקצוע"]).trim(),
+      });
+    }
+
+    const leadObj: Omit<Lead, "id"> = {
+      name,
+      address,
+      phone,
+      email: email || undefined,
+      tenantsCount,
+      currentCompany: currentCompany || undefined,
+      currentCost,
+      managementCost,
+      cleaningCost,
+      gardeningCost,
+      proposalDate,
+      followUpDate,
+      proposalConfirmed,
+      status,
+      notes: notes || undefined,
+      customFields: customFields.length > 0 ? customFields : undefined,
+    };
+
+    if (notes) {
+      (leadObj as any).notesList = [
+        {
+          id: crypto.randomUUID(),
+          text: notes,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+
+    result.push(leadObj);
+  }
+
+  return result;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -241,14 +418,16 @@ function LeadTableView({
             <th className="px-3 py-3 text-right font-semibold w-8 text-gray-400">
               #
             </th>
-            {TABLE_COLUMNS.map((col) => (
+            {TABLE_COLUMNS.map((col, idx) => (
               <th
-                key={col.key}
-                onClick={() => onSort(col.key)}
+                key={col.key ?? idx}
+                onClick={() => col.key && onSort(col.key)}
                 className="px-3 py-3 text-right font-semibold cursor-pointer select-none hover:bg-gray-100 transition-colors whitespace-nowrap"
               >
                 <span className="inline-flex items-center gap-0.5">
-                  <SortIcon active={sortKey === col.key} dir={sortDir} />
+                  {col.key && (
+                    <SortIcon active={sortKey === col.key} dir={sortDir} />
+                  )}
                   {col.label}
                 </span>
               </th>
@@ -261,7 +440,7 @@ function LeadTableView({
         <tbody>
           {leads.length === 0 && (
             <tr>
-              <td colSpan={11} className="text-center py-12 text-gray-400">
+              <td colSpan={12} className="text-center py-12 text-gray-400">
                 אין לידים להצגה
               </td>
             </tr>
@@ -327,7 +506,8 @@ function LeadTableView({
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   {(() => {
-                    const count = (lead as any).notesList?.length ?? 0;
+                    const count =
+                      (lead as any).notesList?.length || (lead.notes ? 1 : 0);
                     return (
                       <button
                         onClick={() => onNotesClick(lead)}
@@ -391,7 +571,8 @@ function LeadMobileList({
           color: "bg-gray-100 text-gray-600",
         };
         const pri = lead.priority ? PRIORITY[lead.priority] : null;
-        const notesCount = (lead as any).notesList?.length ?? 0;
+        const notesCount =
+          (lead as any).notesList?.length || (lead.notes ? 1 : 0);
         return (
           <div
             key={lead.id}
@@ -503,11 +684,55 @@ export default function Leads() {
   );
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const unsub = subscribeLeads(setLeads);
     return unsub;
   }, []);
+
+  const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      const allParsedLeads: Omit<Lead, "id">[] = [];
+
+      for (const sheetName of workbook.SheetNames) {
+        if (sheetName.includes("תבנית")) continue;
+        const sheet = workbook.Sheets[sheetName];
+        const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
+          defval: "",
+        });
+        const parsed = parseSheetRowsToLeads(rows, sheetName);
+        allParsedLeads.push(...parsed);
+      }
+
+      if (allParsedLeads.length === 0) {
+        alert("לא נמצאו לידים תקינים בקובץ האקסל.");
+        return;
+      }
+
+      if (
+        confirm(
+          `נמצאו ${allParsedLeads.length} לידים בקובץ "${file.name}". האם להוסיף אותם למערכת?`,
+        )
+      ) {
+        await bulkAddLeads(allParsedLeads);
+        alert(`✅ ${allParsedLeads.length} לידים נוספו בהצלחה!`);
+      }
+    } catch (err) {
+      console.error("Excel import error:", err);
+      alert("אירעה שגיאה בטעינת קובץ האקסל.");
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   const handleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -589,23 +814,23 @@ export default function Leads() {
       <div className="flex gap-2 flex-wrap flex-shrink-0">
         <div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
           <span className="text-lg font-black">{stats.newCount}</span>
-          <span>• לידים חדשים</span>
+          <span>לידים חדשים</span>
         </div>
         <div className="flex items-center gap-2 bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
           <span className="text-lg font-black">{stats.activeCount}</span>
-          <span>• הצעות פעילות</span>
+          <span>הצעות פעילות</span>
         </div>
         <div className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
           <span className="text-lg font-black">{stats.closedMonth}</span>
-          <span>• נסגרו החודש</span>
+          <span>נסגרו החודש</span>
         </div>
         <div className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow sm:mr-auto">
           <span className="text-lg font-black">{leads.length}</span>
-          <span>• סה"כ</span>
+          <span>סה"כ</span>
         </div>
       </div>
 
-      {/* ===== FILTERS + TOGGLE + ADD ===== */}
+      {/* ===== FILTERS + TOGGLE + EXCEL + ADD ===== */}
       <div className="flex gap-2 flex-wrap flex-shrink-0">
         <input
           placeholder="🔍 חיפוש לפי שם, כתובת, טלפון..."
@@ -645,6 +870,24 @@ export default function Leads() {
             ⊞ קנבן
           </button>
         </div>
+
+        {/* Hidden file input for Excel */}
+        <input
+          type="file"
+          accept=".xlsx,.xls,.csv"
+          ref={fileInputRef}
+          onChange={handleExcelUpload}
+          className="hidden"
+        />
+        <button
+          type="button"
+          disabled={importing}
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm font-medium disabled:opacity-50 transition-colors"
+        >
+          {importing ? "⏳ מייבא..." : "📥 הוספה מאקסל"}
+        </button>
+
         <button
           onClick={() => handleAdd("new")}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"

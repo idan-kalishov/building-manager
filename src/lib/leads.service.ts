@@ -9,6 +9,7 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  writeBatch,
 } from "firebase/firestore";
 import type { Lead } from "../types";
 
@@ -27,6 +28,33 @@ export const addLead = async (data: Omit<Lead, "id">) => {
     order,
     createdAt: serverTimestamp(),
   });
+};
+
+export const bulkAddLeads = async (leadsList: Omit<Lead, "id">[]) => {
+  const CHUNK_SIZE = 450; // מגבלת אצווה של פיירבייס היא 500
+  const baseOrder = Date.now();
+
+  for (let i = 0; i < leadsList.length; i += CHUNK_SIZE) {
+    const chunk = leadsList.slice(i, i + CHUNK_SIZE);
+    const batch = writeBatch(db);
+    const colRef = collection(db, COL);
+
+    chunk.forEach((lead, idx) => {
+      const newDocRef = doc(colRef);
+      // סינון שדות ריקים או undefined כדי ש-Firestore לא יזרוק שגיאה
+      const cleanData = Object.fromEntries(
+        Object.entries(lead).filter(([_, v]) => v !== undefined && v !== ""),
+      );
+
+      batch.set(newDocRef, {
+        ...cleanData,
+        order: baseOrder + (i + idx) * 1000,
+        createdAt: serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
+  }
 };
 
 export const updateLead = (id: string, data: Partial<Lead>) =>
