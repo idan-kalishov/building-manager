@@ -386,7 +386,6 @@ function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
 
 interface ActionProps {
   leads: Lead[];
-  onEdit: (lead: Lead) => void;
   onView: (lead: Lead) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
   onNotesClick: (lead: Lead) => void;
@@ -406,7 +405,6 @@ function LeadTableView({
   sortKey,
   sortDir,
   onSort,
-  onEdit,
   onView,
   onDelete,
   onNotesClick,
@@ -527,12 +525,6 @@ function LeadTableView({
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1">
                     <button
-                      onClick={() => onEdit(lead)}
-                      className="text-xs border border-blue-300 text-blue-600 px-2 py-1 rounded hover:bg-blue-50"
-                    >
-                      ✏️
-                    </button>
-                    <button
                       onClick={(e) => lead.id && onDelete(e, lead.id)}
                       className="text-xs border border-red-300 text-red-500 px-2 py-1 rounded hover:bg-red-50"
                     >
@@ -553,7 +545,6 @@ function LeadTableView({
 
 function LeadMobileList({
   leads,
-  onEdit,
   onView,
   onDelete,
   onNotesClick,
@@ -638,12 +629,6 @@ function LeadMobileList({
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
-                  onClick={() => onEdit(lead)}
-                  className="flex-1 text-sm border border-blue-300 text-blue-600 py-2 rounded-lg hover:bg-blue-50 font-medium"
-                >
-                  ✏️ עריכה
-                </button>
-                <button
                   onClick={() => onNotesClick(lead)}
                   className={`text-sm px-3 py-2 rounded-lg font-medium border transition-colors ${
                     notesCount > 0
@@ -692,6 +677,12 @@ export default function Leads() {
     const unsub = subscribeLeads(setLeads);
     return unsub;
   }, []);
+
+  useEffect(() => {
+    if (!viewing?.id) return;
+    const latestLead = leads.find((lead) => lead.id === viewing.id);
+    if (latestLead && latestLead !== viewing) setViewing(latestLead);
+  }, [leads, viewing]);
 
   const handleExcelUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -785,15 +776,6 @@ export default function Leads() {
   const handleAdd = (status: LeadStatus) => {
     setEditing(null);
     setDefaultStatus(status);
-    setShowForm(true);
-  };
-  const handleEdit = (e: React.MouseEvent, lead: Lead) => {
-    e.stopPropagation();
-    setEditing(lead);
-    setShowForm(true);
-  };
-  const handleEditFromTable = (lead: Lead) => {
-    setEditing(lead);
     setShowForm(true);
   };
   const handleDelete = (e: React.MouseEvent, id: string) => {
@@ -907,7 +889,6 @@ export default function Leads() {
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={handleSort}
-              onEdit={handleEditFromTable}
               onView={handleCardClick}
               onDelete={handleDelete}
               onNotesClick={handleNotesClick}
@@ -917,7 +898,6 @@ export default function Leads() {
           <div className="md:hidden">
             <LeadMobileList
               leads={filteredLeads}
-              onEdit={handleEditFromTable}
               onView={handleCardClick}
               onDelete={handleDelete}
               onNotesClick={handleNotesClick}
@@ -1051,12 +1031,6 @@ export default function Leads() {
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <button
-                                        onClick={(e) => handleEdit(e, lead)}
-                                        className="flex-1 text-xs border border-blue-400 text-blue-600 py-1 rounded hover:bg-blue-50"
-                                      >
-                                        ✏️
-                                      </button>
-                                      <button
                                         onClick={(e) =>
                                           lead.id && handleDelete(e, lead.id)
                                         }
@@ -1100,11 +1074,6 @@ export default function Leads() {
         <LeadDetailModal
           lead={viewing}
           onClose={() => setShowDetail(false)}
-          onEdit={() => {
-            setShowDetail(false);
-            setEditing(viewing);
-            setShowForm(true);
-          }}
         />
       )}
       {showNotes && viewing && (

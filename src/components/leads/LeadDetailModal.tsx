@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { Lead, LeadPriority } from "../../types";
+import { useEffect, useState, type ReactNode } from "react";
+import type { Lead, LeadPriority, LeadStatus } from "../../types";
 import { deleteLead, updateLead } from "../../lib/leads.service";
 import ConfirmModal from "../ConfirmModal";
 import InputModal from "../InputModal";
@@ -8,7 +8,6 @@ import LeadNoteSection, { type LeadNote } from "./LeadNoteSection";
 interface Props {
   lead: Lead;
   onClose: () => void;
-  onEdit: () => void;
 }
 
 interface CallSummary {
@@ -24,7 +23,7 @@ const PRIORITY_LABEL: Record<LeadPriority, string> = {
   low: "🟢 נמוכה",
 };
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<LeadStatus, string> = {
   new: "ליד חדש",
   contacted: "יצירת קשר",
   proposal: "הצעה נשלחה",
@@ -32,6 +31,22 @@ const STATUS_LABEL: Record<string, string> = {
   closed: "נסגר ✅",
   irrelevant: "לא רלוונטי ❌",
 };
+
+const STATUS_OPTIONS: { value: LeadStatus; label: string }[] = [
+  { value: "new", label: STATUS_LABEL.new },
+  { value: "contacted", label: STATUS_LABEL.contacted },
+  { value: "proposal", label: STATUS_LABEL.proposal },
+  { value: "negotiation", label: STATUS_LABEL.negotiation },
+  { value: "closed", label: STATUS_LABEL.closed },
+  { value: "irrelevant", label: STATUS_LABEL.irrelevant },
+];
+
+const PRIORITY_OPTIONS: { value: LeadPriority | ""; label: string }[] = [
+  { value: "", label: "ללא עדיפות" },
+  { value: "high", label: PRIORITY_LABEL.high },
+  { value: "medium", label: PRIORITY_LABEL.medium },
+  { value: "low", label: PRIORITY_LABEL.low },
+];
 
 function isOverdue(dateStr?: string) {
   if (!dateStr) return false;
@@ -49,28 +64,140 @@ function formatDate(iso: string) {
   });
 }
 
-const Row = ({ label, value }: { label: string; value?: any }) =>
-  value ? (
-    <div className="flex justify-between py-2 border-b border-gray-100 last:border-0">
-      <span className="text-gray-500 text-sm">{label}</span>
-      <span className="text-gray-800 text-sm font-medium text-right max-w-[60%]">
-        {String(value)}
-      </span>
-    </div>
-  ) : null;
+interface EditableFieldProps {
+  label: string;
+  value?: string | number | null;
+  displayValue?: (
+    value: string | number | null | undefined,
+  ) => string;
+  type?: "text" | "email" | "number" | "tel" | "date";
+  multiline?: boolean;
+  options?: { value: string; label: string }[];
+  action?: ReactNode;
+  onSave: (value: string) => Promise<void>;
+}
 
-const PhoneRow = ({ phone }: { phone?: string }) =>
-  phone ? (
-    <div className="flex justify-between items-center py-2 border-b border-gray-100">
-      <span className="text-gray-500 text-sm">טלפון</span>
-      <a
-        href={`tel:${phone}`}
-        className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 rounded-lg px-3 py-1 text-sm font-medium hover:bg-green-100 active:bg-green-200 transition-colors"
-      >
-        📞 {phone}
-      </a>
+function EditableField({
+  label,
+  value,
+  displayValue,
+  type = "text",
+  multiline = false,
+  options,
+  action,
+  onSave,
+}: EditableFieldProps) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value == null ? "" : String(value));
+  const [savedValue, setSavedValue] = useState<string | number | null>();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const currentValue = savedValue === undefined ? value : savedValue;
+
+  useEffect(() => {
+    setSavedValue(undefined);
+    setDraft(value == null ? "" : String(value));
+  }, [value]);
+
+  const startEditing = () => {
+    setDraft(value == null ? "" : String(value));
+    setError("");
+    setEditing(true);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(draft);
+      setSavedValue(draft);
+      setEditing(false);
+    } catch (saveError) {
+      console.error("Failed to update lead field", saveError);
+      setError("השמירה נכשלה. נסו שוב.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="py-2 border-b border-gray-100 last:border-0">
+      <div className="flex justify-between items-center gap-3">
+        <span className="text-gray-500 text-sm">{label}</span>
+        {editing ? (
+          <div className="flex flex-1 items-center justify-end gap-2">
+            {options ? (
+              <select
+                aria-label={label}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="min-w-0 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                autoFocus
+              >
+                {options.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            ) : multiline ? (
+              <textarea
+                aria-label={label}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="min-w-0 flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                rows={2}
+                autoFocus
+              />
+            ) : (
+              <input
+                aria-label={label}
+                type={type}
+                value={draft}
+                onChange={(event) => setDraft(event.target.value)}
+                className="min-w-0 flex-1 border rounded-lg px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-300"
+                autoFocus
+              />
+            )}
+            <button
+              type="button"
+              onClick={save}
+              disabled={saving}
+              className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+            >
+              {saving ? "שומר..." : "שמירה"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditing(false)}
+              disabled={saving}
+              className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+            >
+              ביטול
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={startEditing}
+              aria-label={`עריכת ${label}`}
+              className="cursor-pointer text-gray-800 text-sm font-medium text-right max-w-[65%] break-words hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 rounded"
+            >
+              {displayValue
+                ? displayValue(currentValue)
+                : currentValue == null || currentValue === ""
+                  ? "—"
+                  : String(currentValue)}
+            </button>
+            {action}
+          </>
+        )}
+      </div>
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
-  ) : null;
+  );
+}
 
 function CallSummaryCard({ summary }: { summary: CallSummary }) {
   const [expanded, setExpanded] = useState(false);
@@ -129,7 +256,7 @@ function CallSummaryCard({ summary }: { summary: CallSummary }) {
   );
 }
 
-export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
+export default function LeadDetailModal({ lead, onClose }: Props) {
   const overdue = isOverdue(lead.followUpDate);
   const [showAddField, setShowAddField] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -194,9 +321,22 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
         <div className="flex justify-between items-center p-4 border-b">
           <div>
             <h2 className="text-xl font-bold">{lead.address || lead.name}</h2>
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-              {STATUS_LABEL[lead.status]}
-            </span>
+            <EditableField
+              label="סטטוס"
+              value={lead.status}
+              displayValue={(value) =>
+                STATUS_OPTIONS.find((option) => option.value === value)?.label ??
+                "—"
+              }
+              options={STATUS_OPTIONS}
+              onSave={async (value) => {
+                const status = STATUS_OPTIONS.find(
+                  (option) => option.value === value,
+                )?.value;
+                if (!status) throw new Error("Invalid lead status");
+                await updateLead(lead.id!, { status });
+              }}
+            />
           </div>
           <button
             onClick={onClose}
@@ -214,37 +354,109 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             </div>
           )}
 
-          {lead.priority && (
-            <div className="text-sm font-medium">
-              עדיפות: {PRIORITY_LABEL[lead.priority]}
-            </div>
-          )}
+          <EditableField
+            label="עדיפות"
+            value={lead.priority ?? ""}
+            displayValue={(value) =>
+              PRIORITY_OPTIONS.find((option) => option.value === value)?.label ??
+              "—"
+            }
+            options={PRIORITY_OPTIONS}
+            onSave={async (value) => {
+              const priority = PRIORITY_OPTIONS.find(
+                (option) => option.value === value,
+              )?.value;
+              if (priority === undefined) {
+                throw new Error("Invalid lead priority");
+              }
+              await updateLead(lead.id!, { priority: priority || undefined });
+            }}
+          />
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 פרטי הבניין
             </h3>
-            <Row label="כתובת" value={lead.address} />
-            <Row label="מספר דיירים" value={lead.tenantsCount} />
+            <EditableField
+              label="כתובת"
+              value={lead.address}
+              onSave={(value) =>
+                updateLead(lead.id!, { address: value || undefined })
+              }
+            />
+            <EditableField
+              label="מספר דיירים"
+              value={lead.tenantsCount}
+              type="number"
+              onSave={(value) =>
+                updateLead(lead.id!, {
+                  tenantsCount: value === "" ? undefined : Number(value),
+                })
+              }
+            />
           </section>
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               👤 פרטי קשר
             </h3>
-            <Row label="שם ועד הבית" value={lead.name} />
-            <PhoneRow phone={lead.phone} />
-            <Row label="אימייל" value={lead.email} />
+            <EditableField
+              label="שם ועד הבית"
+              value={lead.name}
+              onSave={(value) =>
+                updateLead(lead.id!, { name: value })
+              }
+            />
+            <EditableField
+              label="טלפון"
+              value={lead.phone}
+              type="tel"
+              action={
+                <a
+                  href={`tel:${lead.phone}`}
+                  aria-label="התקשר לליד"
+                  className="text-green-700 text-sm"
+                >
+                  📞
+                </a>
+              }
+              onSave={(value) =>
+                updateLead(lead.id!, { phone: value })
+              }
+            />
+            <EditableField
+              label="אימייל"
+              value={lead.email}
+              type="email"
+              onSave={(value) =>
+                updateLead(lead.id!, { email: value || undefined })
+              }
+            />
           </section>
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               🏢 מצב נוכחי
             </h3>
-            <Row label="חברה מתחרה" value={lead.currentCompany} />
-            <Row
+            <EditableField
+              label="חברה מתחרה"
+              value={lead.currentCompany}
+              onSave={(value) =>
+                updateLead(lead.id!, { currentCompany: value || undefined })
+              }
+            />
+            <EditableField
               label="עלות חודשית נוכחית"
-              value={lead.currentCost ? `₪${lead.currentCost}` : undefined}
+              value={lead.currentCost}
+              type="number"
+              displayValue={(value) =>
+                value == null || value === "" ? "—" : `₪${value}`
+              }
+              onSave={(value) =>
+                updateLead(lead.id!, {
+                  currentCost: value === "" ? undefined : Number(value),
+                })
+              }
             />
           </section>
 
@@ -252,33 +464,89 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               💰 הצעה שלנו
             </h3>
-            <Row
+            <EditableField
               label="עלות ניהול"
-              value={
-                lead.managementCost ? `₪${lead.managementCost}` : undefined
+              value={lead.managementCost}
+              type="number"
+              displayValue={(value) =>
+                value == null || value === "" ? "—" : `₪${value}`
+              }
+              onSave={(value) =>
+                updateLead(lead.id!, {
+                  managementCost: value === "" ? undefined : Number(value),
+                })
               }
             />
-            <Row label="עלות ניקיון" value={lead.cleaningCost} />
-            <Row label="עלות גינון" value={lead.gardeningCost} />
+            <EditableField
+              label="עלות ניקיון"
+              value={lead.cleaningCost}
+              onSave={(value) =>
+                updateLead(lead.id!, { cleaningCost: value || undefined })
+              }
+            />
+            <EditableField
+              label="עלות גינון"
+              value={lead.gardeningCost}
+              onSave={(value) =>
+                updateLead(lead.id!, { gardeningCost: value || undefined })
+              }
+            />
           </section>
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               📅 תהליך מכירה
             </h3>
-            <Row label="תאריך שליחת הצעה" value={lead.proposalDate} />
-            <Row
-              label="וידוא קבלת הצעה"
-              value={
-                lead.proposalConfirmed === true
-                  ? "אישרו ✅"
-                  : lead.proposalConfirmed === false
-                    ? "לא ענו ❌"
-                    : undefined
+            <EditableField
+              label="תאריך שליחת הצעה"
+              value={lead.proposalDate}
+              type="date"
+              onSave={(value) =>
+                updateLead(lead.id!, { proposalDate: value || undefined })
               }
             />
-            <Row label="מועד המשך טיפול" value={lead.followUpDate} />
-            <Row label="המשך טיפול" value={lead.followUpNotes} />
+            <EditableField
+              label="וידוא קבלת הצעה"
+              value={
+                lead.proposalConfirmed === undefined
+                  ? ""
+                  : String(lead.proposalConfirmed)
+              }
+              displayValue={(value) =>
+                value === "true"
+                  ? "אישרו ✅"
+                  : value === "false"
+                    ? "לא ענו ❌"
+                    : "—"
+              }
+              options={[
+                { value: "", label: "לא ידוע" },
+                { value: "true", label: "אישרו ✅" },
+                { value: "false", label: "לא ענו ❌" },
+              ]}
+              onSave={(value) =>
+                updateLead(lead.id!, {
+                  proposalConfirmed:
+                    value === "" ? undefined : value === "true",
+                })
+              }
+            />
+            <EditableField
+              label="מועד המשך טיפול"
+              value={lead.followUpDate}
+              type="date"
+              onSave={(value) =>
+                updateLead(lead.id!, { followUpDate: value || undefined })
+              }
+            />
+            <EditableField
+              label="המשך טיפול"
+              value={lead.followUpNotes}
+              multiline
+              onSave={(value) =>
+                updateLead(lead.id!, { followUpNotes: value || undefined })
+              }
+            />
           </section>
 
           {callSummaries.length > 0 && (
@@ -341,12 +609,6 @@ export default function LeadDetailModal({ lead, onClose, onEdit }: Props) {
 
         {/* ── Footer ── */}
         <div className="flex gap-2 p-4 border-t">
-          <button
-            onClick={onEdit}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium text-sm"
-          >
-            ✏️ עריכה
-          </button>
           <button
             onClick={handleDelete}
             className="border border-red-400 text-red-500 px-4 py-2 rounded-lg hover:bg-red-50 text-sm"

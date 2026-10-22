@@ -3,6 +3,7 @@ import {
   collection,
   addDoc,
   updateDoc,
+  deleteField,
   deleteDoc,
   doc,
   onSnapshot,
@@ -57,8 +58,18 @@ export const bulkAddLeads = async (leadsList: Omit<Lead, "id">[]) => {
   }
 };
 
-export const updateLead = (id: string, data: Partial<Lead>) =>
-  updateDoc(doc(db, COL, id), { ...data, updatedAt: serverTimestamp() });
+export const updateLead = (id: string, data: Partial<Lead>) => {
+  const updates = Object.fromEntries(
+    Object.entries(data).map(([field, value]) => [
+      field,
+      value === undefined ? deleteField() : value,
+    ]),
+  );
+  return updateDoc(doc(db, COL, id), {
+    ...updates,
+    updatedAt: serverTimestamp(),
+  });
+};
 
 export const deleteLead = (id: string) => deleteDoc(doc(db, COL, id));
 

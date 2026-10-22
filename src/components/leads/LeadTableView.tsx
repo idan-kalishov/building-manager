@@ -23,11 +23,10 @@ function isOverdue(dateStr?: string) {
 
 interface Props {
   leads: Lead[];
-  onEdit: (lead: Lead) => void;
   onView: (lead: Lead) => void;
 }
 
-export default function LeadTableView({ leads, onEdit, onView }: Props) {
+export default function LeadTableView({ leads, onView }: Props) {
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (confirm("למחוק ליד זה?")) deleteLead(id);
@@ -110,12 +109,6 @@ export default function LeadTableView({ leads, onEdit, onView }: Props) {
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-1">
-                    <button
-                      onClick={() => onEdit(lead)}
-                      className="text-xs border border-blue-300 text-blue-600 px-2 py-1 rounded hover:bg-blue-50"
-                    >
-                      ✏️
-                    </button>
                     <button
                       onClick={(e) => lead.id && handleDelete(e, lead.id)}
                       className="text-xs border border-red-300 text-red-500 px-2 py-1 rounded hover:bg-red-50"
