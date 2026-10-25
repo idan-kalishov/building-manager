@@ -55,6 +55,7 @@ export interface Lead {
   id?: string;
   address?: string;
   tenantsCount?: number;
+  contactPersons?: ContactPerson[];
   name: string;
   phone: string;
   email?: string;

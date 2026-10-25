@@ -1,5 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
-import type { Lead, LeadPriority, LeadStatus } from "../../types";
+import type {
+  ContactPerson,
+  Lead,
+  LeadPriority,
+  LeadStatus,
+} from "../../types";
 import { deleteLead, updateLead } from "../../lib/leads.service";
 import ConfirmModal from "../ConfirmModal";
 import InputModal from "../InputModal";
@@ -70,6 +75,7 @@ interface EditableFieldProps {
   displayValue?: (
     value: string | number | null | undefined,
   ) => string;
+  linkHref?: string;
   type?: "text" | "email" | "number" | "tel" | "date";
   multiline?: boolean;
   options?: { value: string; label: string }[];
@@ -81,6 +87,7 @@ function EditableField({
   label,
   value,
   displayValue,
+  linkHref,
   type = "text",
   multiline = false,
   options,
@@ -178,18 +185,42 @@ function EditableField({
           </div>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={startEditing}
-              aria-label={`עריכת ${label}`}
-              className="cursor-pointer text-gray-800 text-sm font-medium text-right max-w-[65%] break-words hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 rounded"
-            >
-              {displayValue
-                ? displayValue(currentValue)
-                : currentValue == null || currentValue === ""
-                  ? "—"
-                  : String(currentValue)}
-            </button>
+            {linkHref ? (
+              <a
+                href={linkHref}
+                aria-label={`${label}: ${String(currentValue)}`}
+                className="cursor-pointer text-green-700 text-sm font-medium text-right max-w-[65%] break-words hover:text-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 rounded"
+              >
+                {displayValue
+                  ? displayValue(currentValue)
+                  : currentValue == null || currentValue === ""
+                    ? "—"
+                    : String(currentValue)}
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditing}
+                aria-label={`עריכת ${label}`}
+                className="cursor-pointer text-gray-800 text-sm font-medium text-right max-w-[65%] break-words hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 rounded"
+              >
+                {displayValue
+                  ? displayValue(currentValue)
+                  : currentValue == null || currentValue === ""
+                    ? "—"
+                    : String(currentValue)}
+              </button>
+            )}
+            {linkHref && (
+              <button
+                type="button"
+                onClick={startEditing}
+                aria-label={`עריכת ${label}`}
+                className="cursor-pointer text-gray-400 text-xs hover:text-blue-700"
+              >
+                ✏️
+              </button>
+            )}
             {action}
           </>
         )}
@@ -260,6 +291,12 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
   const overdue = isOverdue(lead.followUpDate);
   const [showAddField, setShowAddField] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const contactPersons: ContactPerson[] = lead.contactPersons?.length
+    ? lead.contactPersons
+    : [{ id: "legacy-contact", name: lead.name, phone: lead.phone }];
+  const [showAddContact, setShowAddContact] = useState(false);
+  const [newContact, setNewContact] = useState({ name: "", phone: "" });
+  const [contactError, setContactError] = useState("");
 
   const [notesList, setNotesList] = useState<LeadNote[]>(
     (lead as any).notesList ?? [],
@@ -309,6 +346,63 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
     const updated = (lead.customFields || []).filter((f) => f.id !== fieldId);
     updateLead(lead.id!, { customFields: updated });
     setConfirmDelete(null);
+  };
+
+  const saveContactPersons = async (updated: ContactPerson[]) => {
+    const primaryContact = updated[0];
+    await updateLead(lead.id!, {
+      contactPersons: updated,
+      name: primaryContact.name,
+      phone: primaryContact.phone,
+    });
+  };
+
+  const updateContact = async (
+    contactId: string,
+    field: "name" | "phone",
+    value: string,
+  ) => {
+    const updated = contactPersons.map((person) =>
+      person.id === contactId ? { ...person, [field]: value } : person,
+    );
+    await saveContactPersons(updated);
+  };
+
+  const addContact = async () => {
+    const name = newContact.name.trim();
+    const phone = newContact.phone.trim();
+    if (!name || !phone) {
+      setContactError("יש למלא שם וטלפון.");
+      return;
+    }
+
+    const updated = [
+      ...contactPersons,
+      { id: crypto.randomUUID(), name, phone },
+    ];
+    try {
+      await saveContactPersons(updated);
+      setNewContact({ name: "", phone: "" });
+      setContactError("");
+      setShowAddContact(false);
+    } catch (error) {
+      console.error("Failed to add lead contact", error);
+      setContactError("שמירת איש הקשר נכשלה. נסו שוב.");
+    }
+  };
+
+  const deleteContact = async (contactId: string) => {
+    if (contactPersons.length <= 1) return;
+    if (!confirm("למחוק את איש הקשר?")) return;
+
+    const updated = contactPersons.filter((person) => person.id !== contactId);
+    try {
+      await saveContactPersons(updated);
+      setContactError("");
+    } catch (error) {
+      console.error("Failed to delete lead contact", error);
+      setContactError("מחיקת איש הקשר נכשלה. נסו שוב.");
+    }
   };
 
   return (
@@ -400,30 +494,110 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
               👤 פרטי קשר
             </h3>
-            <EditableField
-              label="שם ועד הבית"
-              value={lead.name}
-              onSave={(value) =>
-                updateLead(lead.id!, { name: value })
-              }
-            />
-            <EditableField
-              label="טלפון"
-              value={lead.phone}
-              type="tel"
-              action={
-                <a
-                  href={`tel:${lead.phone}`}
-                  aria-label="התקשר לליד"
-                  className="text-green-700 text-sm"
+            <div className="space-y-3">
+              {contactPersons.map((person, index) => (
+                <div
+                  key={person.id}
+                  className="rounded-lg border border-gray-200 bg-gray-50 px-3"
                 >
-                  📞
-                </a>
-              }
-              onSave={(value) =>
-                updateLead(lead.id!, { phone: value })
-              }
-            />
+                  <div className="flex items-center justify-between border-b border-gray-200">
+                    <span className="py-2 text-xs font-semibold text-gray-500">
+                      איש קשר {index + 1}
+                    </span>
+                    {contactPersons.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => deleteContact(person.id)}
+                        className="py-2 text-xs text-red-500 hover:text-red-700"
+                      >
+                        הסרה
+                      </button>
+                    )}
+                  </div>
+                  <EditableField
+                    label="שם"
+                    value={person.name}
+                    onSave={(value) =>
+                      updateContact(person.id, "name", value)
+                    }
+                  />
+                  <EditableField
+                    label="טלפון"
+                    value={person.phone}
+                    linkHref={
+                      person.phone ? `tel:${person.phone}` : undefined
+                    }
+                    type="tel"
+                    onSave={(value) =>
+                      updateContact(person.id, "phone", value)
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            {showAddContact && (
+              <div className="mt-3 space-y-2 rounded-lg border border-blue-200 bg-blue-50/50 p-3">
+                <input
+                  aria-label="שם איש קשר חדש"
+                  placeholder="שם איש קשר"
+                  value={newContact.name}
+                  onChange={(event) =>
+                    setNewContact((contact) => ({
+                      ...contact,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <input
+                  aria-label="טלפון איש קשר חדש"
+                  placeholder="טלפון"
+                  type="tel"
+                  value={newContact.phone}
+                  onChange={(event) =>
+                    setNewContact((contact) => ({
+                      ...contact,
+                      phone: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={addContact}
+                    className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    הוספה
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddContact(false);
+                      setContactError("");
+                    }}
+                    className="rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-white"
+                  >
+                    ביטול
+                  </button>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                setShowAddContact((visible) => !visible);
+                setContactError("");
+              }}
+              className="mt-3 w-full rounded-lg border border-dashed border-blue-300 py-2 text-sm text-blue-600 hover:bg-blue-50"
+            >
+              + הוספת איש קשר
+            </button>
+            {contactError && (
+              <p role="alert" className="mt-2 text-xs text-red-600">
+                {contactError}
+              </p>
+            )}
             <EditableField
               label="אימייל"
               value={lead.email}
