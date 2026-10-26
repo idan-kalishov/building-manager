@@ -49,6 +49,8 @@ export interface LeadNote {
   timestamp: string;
   author: string;
   message: string;
+  createdAt?: string;
+  text?: string;
 }
 
 export interface Lead {

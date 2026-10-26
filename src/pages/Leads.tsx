@@ -668,7 +668,7 @@ export default function Leads() {
   const [filterPriority, setFilterPriority] = useState<LeadPriority | "all">(
     "all",
   );
-  const [sortKey, setSortKey] = useState<SortKey>(null);
+  const [sortKey, setSortKey] = useState<SortKey>("followUpDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

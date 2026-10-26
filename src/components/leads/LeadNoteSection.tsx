@@ -1,23 +1,11 @@
 import { useState, useRef } from "react";
-
-// ─── Type ─────────────────────────────────────────────────────────────────────
-// Add to your types.ts:
-//   export interface LeadNote { id: string; timestamp: string; author: string; message: string; }
-//   In Lead interface: notesList?: LeadNote[];
-
-export interface LeadNote {
-  id: string;
-  timestamp: string;
-  author: string;
-  message: string;
-  // תמיכה לאחור בהערות שיובאו מאקסל
-  createdAt?: string;
-  text?: string;
-}
+import type { LeadNote } from "../../types";
+export type { LeadNote } from "../../types";
 
 interface Props {
   notes: LeadNote[];
   onAddNote: (message: string, author: string) => void;
+  onEditNote: (id: string, message: string) => Promise<void>;
   onDeleteNote?: (id: string) => void;
 }
 
@@ -51,12 +39,17 @@ function formatNoteDate(dateStr?: string) {
 export default function LeadNoteSection({
   notes,
   onAddNote,
+  onEditNote,
   onDeleteNote,
 }: Props) {
   const [message, setMessage] = useState("");
   const [author, setAuthor] = useState<string>("גדי");
   const [isListening, setIsListening] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
   const recognitionRef = useRef<any>(null);
 
   const startVoice = () => {
@@ -98,6 +91,24 @@ export default function LeadNoteSection({
     onAddNote(message.trim(), author);
     setMessage("");
     setShowForm(false);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    if (!editingMessage.trim()) {
+      setEditError("ההערה לא יכולה להיות ריקה.");
+      return;
+    }
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      await onEditNote(id, editingMessage.trim());
+      setEditingId(null);
+    } catch (error) {
+      console.error("Failed to edit lead note", error);
+      setEditError("שמירת ההערה נכשלה. נסו שוב.");
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   return (
@@ -221,9 +232,56 @@ export default function LeadNoteSection({
                     )}
                   </div>
                 </div>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                  {displayMessage}
-                </p>
+                {editingId === note.id ? (
+                  <div className="space-y-2">
+                    <textarea
+                      aria-label="עריכת הערה"
+                      value={editingMessage}
+                      onChange={(event) =>
+                        setEditingMessage(event.target.value)
+                      }
+                      rows={3}
+                      className="w-full resize-y rounded-lg border border-blue-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                      autoFocus
+                    />
+                    {editError && (
+                      <p role="alert" className="text-xs text-red-600">
+                        {editError}
+                      </p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        disabled={savingEdit}
+                        className="rounded-lg border px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        ביטול
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSaveEdit(note.id)}
+                        disabled={savingEdit}
+                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      >
+                        {savingEdit ? "שומר..." : "שמירה"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingId(note.id);
+                      setEditingMessage(displayMessage);
+                      setEditError("");
+                    }}
+                    aria-label="לחצו לעריכת ההערה"
+                    className="w-full cursor-pointer rounded text-right text-gray-700 leading-relaxed whitespace-pre-wrap hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                  >
+                    {displayMessage}
+                  </button>
+                )}
               </div>
             );
           })

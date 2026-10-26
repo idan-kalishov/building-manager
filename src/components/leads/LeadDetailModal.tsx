@@ -299,7 +299,7 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
   const [contactError, setContactError] = useState("");
 
   const [notesList, setNotesList] = useState<LeadNote[]>(
-    (lead as any).notesList ?? [],
+    lead.notesList ?? [],
   );
   const callSummaries: CallSummary[] = (lead as any).callSummaries ?? [];
 
@@ -317,13 +317,21 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
     };
     const updated = [...notesList, newNote];
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated } as any);
+    updateLead(lead.id!, { notesList: updated });
+  };
+
+  const handleEditNote = async (id: string, message: string) => {
+    const updated = notesList.map((note) =>
+      note.id === id ? { ...note, message } : note,
+    );
+    await updateLead(lead.id!, { notesList: updated });
+    setNotesList(updated);
   };
 
   const handleDeleteNote = (id: string) => {
     const updated = notesList.filter((n) => n.id !== id);
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated } as any);
+    updateLead(lead.id!, { notesList: updated });
   };
 
   const handleAddField = (label: string) => {
@@ -744,6 +752,7 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
           <LeadNoteSection
             notes={notesList}
             onAddNote={handleAddNote}
+            onEditNote={handleEditNote}
             onDeleteNote={handleDeleteNote}
           />
 
