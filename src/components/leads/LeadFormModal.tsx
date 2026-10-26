@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { addLead, updateLead } from "../../lib/leads.service";
+import type { LeadCollection } from "../../lib/leads.service";
 import type { Lead, LeadStatus, LeadPriority } from "../../types";
 import ConfirmModal from "../ConfirmModal";
 import InputModal from "../InputModal";
@@ -7,6 +8,7 @@ import InputModal from "../InputModal";
 interface Props {
   lead?: Lead | null;
   defaultStatus?: LeadStatus;
+  collectionName?: LeadCollection;
   onClose: () => void;
 }
 
@@ -25,8 +27,10 @@ const Field = ({ label, value, onChange, type = "text" }: any) => (
 export default function LeadFormModal({
   lead,
   defaultStatus = "new",
+  collectionName = "leads",
   onClose,
 }: Props) {
+  const isPropertyLead = collectionName === "propertyLeads";
   const [data, setData] = useState<Partial<Lead>>(
     lead || { status: defaultStatus },
   );
@@ -41,9 +45,9 @@ export default function LeadFormModal({
   const handleSave = async () => {
     if (!data.name || !data.phone) return alert("שם וטלפון הם שדות חובה");
     if (lead?.id) {
-      await updateLead(lead.id, data);
+      await updateLead(lead.id, data, collectionName);
     } else {
-      await addLead(data as Omit<Lead, "id">);
+      await addLead(data as Omit<Lead, "id">, collectionName);
     }
     onClose();
   };
@@ -79,7 +83,13 @@ export default function LeadFormModal({
         {/* Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-xl font-bold">
-            {lead ? "עריכת ליד" : "ליד חדש"}
+            {lead
+              ? isPropertyLead
+                ? "עריכת ליד נכס"
+                : "עריכת ליד בניין"
+              : isPropertyLead
+                ? "ליד נכס חדש"
+                : "ליד בניין חדש"}
           </h2>
           <button
             onClick={onClose}
@@ -91,6 +101,88 @@ export default function LeadFormModal({
 
         {/* Fields */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
+          {isPropertyLead ? (
+            <>
+              <Field label="שם איש קשר *" {...f("name")} />
+              <Field label="כתובת הנכס" {...f("address")} />
+              <Field label="טלפון *" {...f("phone")} type="tel" />
+              <Field label="אימייל" {...f("email")} type="email" />
+              <Field
+                label="מועד המשך טיפול"
+                {...f("followUpDate")}
+                type="date"
+              />
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">
+                  עדיפות
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: "high", label: "🔴 גבוהה" },
+                    { value: "medium", label: "🟡 בינונית" },
+                    { value: "low", label: "⚪ נמוכה" },
+                  ].map((priority) => (
+                    <button
+                      key={priority.value}
+                      type="button"
+                      onClick={() =>
+                        setData((current) => ({
+                          ...current,
+                          priority: priority.value as LeadPriority,
+                        }))
+                      }
+                      className={`flex-1 rounded-lg border py-2 text-sm transition-colors ${
+                        data.priority === priority.value
+                          ? "border-blue-600 bg-blue-600 text-white"
+                          : "border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {priority.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">
+                  סטטוס
+                </label>
+                <select
+                  value={data.status || "new"}
+                  onChange={(event) =>
+                    setData((current) => ({
+                      ...current,
+                      status: event.target.value as LeadStatus,
+                    }))
+                  }
+                  className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                  <option value="new">ליד חדש</option>
+                  <option value="contacted">יצירת קשר</option>
+                  <option value="proposal">הצעה נשלחה</option>
+                  <option value="negotiation">משא ומתן</option>
+                  <option value="closed">נסגר ✅</option>
+                  <option value="irrelevant">לא רלוונטי ❌</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className="text-sm font-medium text-gray-600">
+                  הערות
+                </label>
+                <textarea
+                  value={data.notes || ""}
+                  onChange={(event) =>
+                    setData((current) => ({
+                      ...current,
+                      notes: event.target.value,
+                    }))
+                  }
+                  rows={3}
+                  className="resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+            </>
+          ) : (
+            <>
           {/* עדיפות */}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-600">עדיפות</label>
@@ -251,6 +343,8 @@ export default function LeadFormModal({
               </button>
             </div>
           </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}

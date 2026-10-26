@@ -12,8 +12,8 @@ import {
   deleteLead,
   getOrderBetween,
   bulkAddLeads,
+  type LeadCollection,
 } from "../lib/leads.service";
-import { useLeadsStore } from "../store/leadsStore";
 import type { Lead, LeadStatus, LeadPriority } from "../types";
 import LeadFormModal from "../components/leads/LeadFormModal";
 import LeadDetailModal from "../components/leads/LeadDetailModal";
@@ -655,8 +655,16 @@ function LeadMobileList({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function Leads() {
-  const { leads, setLeads } = useLeadsStore();
+interface LeadsProps {
+  collectionName?: LeadCollection;
+  title?: string;
+}
+
+export default function Leads({
+  collectionName = "leads",
+  title = "לידים בניינים",
+}: LeadsProps) {
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [showForm, setShowForm] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -674,9 +682,9 @@ export default function Leads() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsub = subscribeLeads(setLeads);
+    const unsub = subscribeLeads(setLeads, collectionName);
     return unsub;
-  }, []);
+  }, [collectionName]);
 
   useEffect(() => {
     if (!viewing?.id) return;
@@ -714,7 +722,7 @@ export default function Leads() {
           `נמצאו ${allParsedLeads.length} לידים בקובץ "${file.name}". האם להוסיף אותם למערכת?`,
         )
       ) {
-        await bulkAddLeads(allParsedLeads);
+        await bulkAddLeads(allParsedLeads, collectionName);
         alert(`✅ ${allParsedLeads.length} לידים נוספו בהצלחה!`);
       }
     } catch (err) {
@@ -770,7 +778,7 @@ export default function Leads() {
     const beforeItem = filtered[destination.index - 1];
     const afterItem = filtered[destination.index];
     const newOrder = getOrderBetween(beforeItem?.order, afterItem?.order);
-    updateLead(draggableId, { status: newStatus, order: newOrder });
+    updateLead(draggableId, { status: newStatus, order: newOrder }, collectionName);
   };
 
   const handleAdd = (status: LeadStatus) => {
@@ -780,7 +788,7 @@ export default function Leads() {
   };
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    if (confirm("למחוק ליד זה?")) deleteLead(id);
+    if (confirm("למחוק ליד זה?")) deleteLead(id, collectionName);
   };
   const handleCardClick = (lead: Lead) => {
     setViewing(lead);
@@ -793,6 +801,7 @@ export default function Leads() {
 
   return (
     <div dir="rtl" className="h-full flex flex-col gap-3">
+      <h1 className="text-xl font-bold text-gray-800">{title}</h1>
       {/* ===== DASHBOARD BAR ===== */}
       <div className="flex gap-2 flex-wrap flex-shrink-0">
         <div className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow">
@@ -1067,17 +1076,23 @@ export default function Leads() {
         <LeadFormModal
           lead={editing}
           defaultStatus={defaultStatus}
+          collectionName={collectionName}
           onClose={() => setShowForm(false)}
         />
       )}
       {showDetail && viewing && (
         <LeadDetailModal
           lead={viewing}
+          collectionName={collectionName}
           onClose={() => setShowDetail(false)}
         />
       )}
       {showNotes && viewing && (
-        <LeadNotesModal lead={viewing} onClose={() => setShowNotes(false)} />
+        <LeadNotesModal
+          lead={viewing}
+          collectionName={collectionName}
+          onClose={() => setShowNotes(false)}
+        />
       )}
     </div>
   );

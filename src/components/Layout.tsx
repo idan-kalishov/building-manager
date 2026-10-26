@@ -14,7 +14,8 @@ export default function Layout() {
   const navItems = [
     { path: "/", label: "משימות", icon: "📋", exact: true },
     { path: "/buildings", label: "בניינים", icon: "🏗️" },
-    { path: "/leads", label: "לידים", icon: "📌" },
+    { path: "/leads", label: "לידים בניינים", icon: "📌" },
+    { path: "/property-leads", label: "לידים נכסים", icon: "🏠" },
     { path: "/suppliers", label: "ספקים", icon: "🔧" },
     { path: "/contacts-import", label: "ייצוא לג'ימייל", icon: "📤" },
   ];

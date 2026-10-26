@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import type { Lead } from "../../types";
+import type { LeadCollection } from "../../lib/leads.service";
 import { updateLead } from "../../lib/leads.service";
 import LeadNoteSection, { type LeadNote } from "./LeadNoteSection";
 
 interface Props {
   lead: Lead;
+  collectionName?: LeadCollection;
   onClose: () => void;
 }
 
@@ -266,7 +268,11 @@ function CallSummaryCard({
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-export default function LeadNotesModal({ lead, onClose }: Props) {
+export default function LeadNotesModal({
+  lead,
+  collectionName = "leads",
+  onClose,
+}: Props) {
   const [notesList, setNotesList] = useState<LeadNote[]>(
     lead.notesList ?? [],
   );
@@ -296,21 +302,21 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
     };
     const updated = [...notesList, newNote];
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated });
+    updateLead(lead.id!, { notesList: updated }, collectionName);
   };
 
   const handleEditNote = async (id: string, message: string) => {
     const updated = notesList.map((note) =>
       note.id === id ? { ...note, message } : note,
     );
-    await updateLead(lead.id!, { notesList: updated });
+    await updateLead(lead.id!, { notesList: updated }, collectionName);
     setNotesList(updated);
   };
 
   const handleDeleteNote = (id: string) => {
     const updated = notesList.filter((n) => n.id !== id);
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated });
+    updateLead(lead.id!, { notesList: updated }, collectionName);
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -365,7 +371,7 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
     };
     const updated = [newEntry, ...callSummaries];
     setCallSummaries(updated);
-    updateLead(lead.id!, { callSummaries: updated } as any);
+    updateLead(lead.id!, { callSummaries: updated } as any, collectionName);
     setPendingSummary(null);
     setPendingTranscript(null);
     setUploadStatus("idle");
@@ -382,7 +388,7 @@ export default function LeadNotesModal({ lead, onClose }: Props) {
   const handleDeleteSummary = (id: string) => {
     const updated = callSummaries.filter((s) => s.id !== id);
     setCallSummaries(updated);
-    updateLead(lead.id!, { callSummaries: updated } as any);
+    updateLead(lead.id!, { callSummaries: updated } as any, collectionName);
   };
 
   const handleUploadButtonClick = () => {

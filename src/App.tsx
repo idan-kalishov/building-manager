@@ -50,6 +50,12 @@ export default function App() {
           <Route path="buildings" element={<Buildings />} />
           <Route path="buildings/:id" element={<BuildingDetail />} />
           <Route path="leads" element={<Leads />} />
+          <Route
+            path="property-leads"
+            element={
+              <Leads collectionName="propertyLeads" title="לידים נכסים" />
+            }
+          />
           <Route path="contacts-import" element={<ContactsImport />} />
           <Route path="suppliers" element={<Suppliers />} />
         </Route>

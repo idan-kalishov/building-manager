@@ -5,6 +5,7 @@ import type {
   LeadPriority,
   LeadStatus,
 } from "../../types";
+import type { LeadCollection } from "../../lib/leads.service";
 import { deleteLead, updateLead } from "../../lib/leads.service";
 import ConfirmModal from "../ConfirmModal";
 import InputModal from "../InputModal";
@@ -12,6 +13,7 @@ import LeadNoteSection, { type LeadNote } from "./LeadNoteSection";
 
 interface Props {
   lead: Lead;
+  collectionName?: LeadCollection;
   onClose: () => void;
 }
 
@@ -287,7 +289,12 @@ function CallSummaryCard({ summary }: { summary: CallSummary }) {
   );
 }
 
-export default function LeadDetailModal({ lead, onClose }: Props) {
+export default function LeadDetailModal({
+  lead,
+  collectionName = "leads",
+  onClose,
+}: Props) {
+  const isPropertyLead = collectionName === "propertyLeads";
   const overdue = isOverdue(lead.followUpDate);
   const [showAddField, setShowAddField] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
@@ -302,9 +309,11 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
     lead.notesList ?? [],
   );
   const callSummaries: CallSummary[] = (lead as any).callSummaries ?? [];
+  const saveLead = (data: Partial<Lead>) =>
+    updateLead(lead.id!, data, collectionName);
 
   const handleDelete = async () => {
-    await deleteLead(lead.id!);
+    await deleteLead(lead.id!, collectionName);
     onClose();
   };
 
@@ -317,21 +326,21 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
     };
     const updated = [...notesList, newNote];
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated });
+    saveLead({ notesList: updated });
   };
 
   const handleEditNote = async (id: string, message: string) => {
     const updated = notesList.map((note) =>
       note.id === id ? { ...note, message } : note,
     );
-    await updateLead(lead.id!, { notesList: updated });
+    await saveLead({ notesList: updated });
     setNotesList(updated);
   };
 
   const handleDeleteNote = (id: string) => {
     const updated = notesList.filter((n) => n.id !== id);
     setNotesList(updated);
-    updateLead(lead.id!, { notesList: updated });
+    saveLead({ notesList: updated });
   };
 
   const handleAddField = (label: string) => {
@@ -339,7 +348,7 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
       ...(lead.customFields || []),
       { id: crypto.randomUUID(), label, value: "" },
     ];
-    updateLead(lead.id!, { customFields: updated });
+    saveLead({ customFields: updated });
     setShowAddField(false);
   };
 
@@ -347,18 +356,18 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
     const updated = (lead.customFields || []).map((f) =>
       f.id !== fieldId ? f : { ...f, value },
     );
-    updateLead(lead.id!, { customFields: updated });
+    saveLead({ customFields: updated });
   };
 
   const handleDeleteField = (fieldId: string) => {
     const updated = (lead.customFields || []).filter((f) => f.id !== fieldId);
-    updateLead(lead.id!, { customFields: updated });
+    saveLead({ customFields: updated });
     setConfirmDelete(null);
   };
 
   const saveContactPersons = async (updated: ContactPerson[]) => {
     const primaryContact = updated[0];
-    await updateLead(lead.id!, {
+    await saveLead({
       contactPersons: updated,
       name: primaryContact.name,
       phone: primaryContact.phone,
@@ -436,7 +445,7 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
                   (option) => option.value === value,
                 )?.value;
                 if (!status) throw new Error("Invalid lead status");
-                await updateLead(lead.id!, { status });
+                await saveLead({ status });
               }}
             />
           </div>
@@ -471,31 +480,33 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
               if (priority === undefined) {
                 throw new Error("Invalid lead priority");
               }
-              await updateLead(lead.id!, { priority: priority || undefined });
+              await saveLead({ priority: priority || undefined });
             }}
           />
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-              🏢 פרטי הבניין
+              {isPropertyLead ? "🏠 פרטי הנכס" : "🏢 פרטי הבניין"}
             </h3>
             <EditableField
               label="כתובת"
               value={lead.address}
               onSave={(value) =>
-                updateLead(lead.id!, { address: value || undefined })
+                saveLead({ address: value || undefined })
               }
             />
-            <EditableField
-              label="מספר דיירים"
-              value={lead.tenantsCount}
-              type="number"
-              onSave={(value) =>
-                updateLead(lead.id!, {
-                  tenantsCount: value === "" ? undefined : Number(value),
-                })
-              }
-            />
+            {!isPropertyLead && (
+              <EditableField
+                label="מספר דיירים"
+                value={lead.tenantsCount}
+                type="number"
+                onSave={(value) =>
+                  saveLead({
+                    tenantsCount: value === "" ? undefined : Number(value),
+                  })
+                }
+              />
+            )}
           </section>
 
           <section>
@@ -611,114 +622,122 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
               value={lead.email}
               type="email"
               onSave={(value) =>
-                updateLead(lead.id!, { email: value || undefined })
+                saveLead({ email: value || undefined })
               }
             />
           </section>
 
-          <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-              🏢 מצב נוכחי
-            </h3>
-            <EditableField
-              label="חברה מתחרה"
-              value={lead.currentCompany}
-              onSave={(value) =>
-                updateLead(lead.id!, { currentCompany: value || undefined })
-              }
-            />
-            <EditableField
-              label="עלות חודשית נוכחית"
-              value={lead.currentCost}
-              type="number"
-              displayValue={(value) =>
-                value == null || value === "" ? "—" : `₪${value}`
-              }
-              onSave={(value) =>
-                updateLead(lead.id!, {
-                  currentCost: value === "" ? undefined : Number(value),
-                })
-              }
-            />
-          </section>
+          {!isPropertyLead && (
+            <section>
+              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+                🏢 מצב נוכחי
+              </h3>
+              <EditableField
+                label="חברה מתחרה"
+                value={lead.currentCompany}
+                onSave={(value) =>
+                  saveLead({ currentCompany: value || undefined })
+                }
+              />
+              <EditableField
+                label="עלות חודשית נוכחית"
+                value={lead.currentCost}
+                type="number"
+                displayValue={(value) =>
+                  value == null || value === "" ? "—" : `₪${value}`
+                }
+                onSave={(value) =>
+                  saveLead({
+                    currentCost: value === "" ? undefined : Number(value),
+                  })
+                }
+              />
+            </section>
+          )}
+
+          {!isPropertyLead && (
+            <section>
+              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+                💰 הצעה שלנו
+              </h3>
+              <EditableField
+                label="עלות ניהול"
+                value={lead.managementCost}
+                type="number"
+                displayValue={(value) =>
+                  value == null || value === "" ? "—" : `₪${value}`
+                }
+                onSave={(value) =>
+                  saveLead({
+                    managementCost: value === "" ? undefined : Number(value),
+                  })
+                }
+              />
+              <EditableField
+                label="עלות ניקיון"
+                value={lead.cleaningCost}
+                onSave={(value) =>
+                  saveLead({ cleaningCost: value || undefined })
+                }
+              />
+              <EditableField
+                label="עלות גינון"
+                value={lead.gardeningCost}
+                onSave={(value) =>
+                  saveLead({ gardeningCost: value || undefined })
+                }
+              />
+            </section>
+          )}
 
           <section>
             <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-              💰 הצעה שלנו
+              {isPropertyLead ? "📅 מעקב" : "📅 תהליך מכירה"}
             </h3>
-            <EditableField
-              label="עלות ניהול"
-              value={lead.managementCost}
-              type="number"
-              displayValue={(value) =>
-                value == null || value === "" ? "—" : `₪${value}`
-              }
-              onSave={(value) =>
-                updateLead(lead.id!, {
-                  managementCost: value === "" ? undefined : Number(value),
-                })
-              }
-            />
-            <EditableField
-              label="עלות ניקיון"
-              value={lead.cleaningCost}
-              onSave={(value) =>
-                updateLead(lead.id!, { cleaningCost: value || undefined })
-              }
-            />
-            <EditableField
-              label="עלות גינון"
-              value={lead.gardeningCost}
-              onSave={(value) =>
-                updateLead(lead.id!, { gardeningCost: value || undefined })
-              }
-            />
-          </section>
-
-          <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
-              📅 תהליך מכירה
-            </h3>
-            <EditableField
-              label="תאריך שליחת הצעה"
-              value={lead.proposalDate}
-              type="date"
-              onSave={(value) =>
-                updateLead(lead.id!, { proposalDate: value || undefined })
-              }
-            />
-            <EditableField
-              label="וידוא קבלת הצעה"
-              value={
-                lead.proposalConfirmed === undefined
-                  ? ""
-                  : String(lead.proposalConfirmed)
-              }
-              displayValue={(value) =>
-                value === "true"
-                  ? "אישרו ✅"
-                  : value === "false"
-                    ? "לא ענו ❌"
-                    : "—"
-              }
-              options={[
-                { value: "", label: "לא ידוע" },
-                { value: "true", label: "אישרו ✅" },
-                { value: "false", label: "לא ענו ❌" },
-              ]}
-              onSave={(value) =>
-                updateLead(lead.id!, {
-                  proposalConfirmed:
-                    value === "" ? undefined : value === "true",
-                })
-              }
-            />
+            {!isPropertyLead && (
+              <>
+                <EditableField
+                  label="תאריך שליחת הצעה"
+                  value={lead.proposalDate}
+                  type="date"
+                  onSave={(value) =>
+                    saveLead({ proposalDate: value || undefined })
+                  }
+                />
+                <EditableField
+                  label="וידוא קבלת הצעה"
+                  value={
+                    lead.proposalConfirmed === undefined
+                      ? ""
+                      : String(lead.proposalConfirmed)
+                  }
+                  displayValue={(value) =>
+                    value === "true"
+                      ? "אישרו ✅"
+                      : value === "false"
+                        ? "לא ענו ❌"
+                        : "—"
+                  }
+                  options={[
+                    { value: "", label: "לא ידוע" },
+                    { value: "true", label: "אישרו ✅" },
+                    { value: "false", label: "לא ענו ❌" },
+                  ]}
+                  onSave={(value) =>
+                    saveLead({
+                      proposalConfirmed:
+                        value === "" ? undefined : value === "true",
+                    })
+                  }
+                />
+              </>
+            )}
             <EditableField
               label="מועד המשך טיפול"
               value={lead.followUpDate}
               type="date"
               onSave={(value) =>
-                updateLead(lead.id!, { followUpDate: value || undefined })
+                saveLead({ followUpDate: value || undefined })
               }
             />
             <EditableField
@@ -726,7 +745,7 @@ export default function LeadDetailModal({ lead, onClose }: Props) {
               value={lead.followUpNotes}
               multiline
               onSave={(value) =>
-                updateLead(lead.id!, { followUpNotes: value || undefined })
+                saveLead({ followUpNotes: value || undefined })
               }
             />
           </section>
