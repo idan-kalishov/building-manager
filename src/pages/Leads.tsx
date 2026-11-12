@@ -161,6 +161,83 @@ function parseSheetRowsToLeads(
     !isIrrelevantSheet;
 
   for (const row of rows) {
+    const isOwnerRow =
+      Object.prototype.hasOwnProperty.call(row, "שם מלא בעל דירה") ||
+      Object.prototype.hasOwnProperty.call(row, "כתובת בניין");
+
+    if (isOwnerRow) {
+      const getCellText = (key: string) => String(row[key] ?? "").trim();
+      const buildingAddress = getCellText("כתובת בניין");
+      const entrance = getCellText("כניסה / תת חלקה");
+      const apartment = getCellText("דירה");
+      const addressParts = [buildingAddress];
+      if (entrance) addressParts.push(`כניסה / תת חלקה ${entrance}`);
+      const address = [
+        addressParts.filter(Boolean).join(", "),
+        apartment ? `דירה ${apartment}` : "",
+      ]
+        .filter(Boolean)
+        .join(" - ");
+
+      const fullName = getCellText("שם מלא בעל דירה");
+      const name =
+        fullName ||
+        [getCellText("שם פרטי"), getCellText("שם משפחה")]
+          .filter(Boolean)
+          .join(" ");
+      const phone =
+        [
+          getCellText("טלפון ראשי"),
+          getCellText("נייד 1"),
+          getCellText("נייד 2"),
+          getCellText("טלפון בית"),
+          getCellText("טלפון עבודה"),
+        ].find(Boolean) || "—";
+      const email = getCellText("אימייל");
+
+      if (!address && !name && phone === "—" && !email) continue;
+
+      const tenants = getCellText("שוכרים בדירה");
+      const notes = tenants ? `שוכרים בדירה: ${tenants}` : undefined;
+      const customFields: { id: string; label: string; value: string }[] = [];
+      const addCustomField = (label: string, value: string) => {
+        if (value) customFields.push({ id: crypto.randomUUID(), label, value });
+      };
+
+      addCustomField("דירה", apartment);
+      addCustomField("קומה", getCellText("קומה"));
+      if (getCellText("חבר ועד") === "כן") {
+        addCustomField("חבר ועד", "כן");
+      }
+      for (const label of ["נייד 2", "טלפון בית", "טלפון עבודה"]) {
+        addCustomField(label, getCellText(label));
+      }
+
+      const leadObj: Omit<Lead, "id"> = {
+        name: name || `בעל דירה${address ? ` - ${address}` : ""}`,
+        address: address || undefined,
+        phone,
+        email: email || undefined,
+        status: "new",
+        notes,
+        customFields: customFields.length > 0 ? customFields : undefined,
+      };
+
+      if (notes) {
+        leadObj.notesList = [
+          {
+            id: crypto.randomUUID(),
+            timestamp: new Date().toISOString(),
+            author: "גדי",
+            message: notes,
+          },
+        ];
+      }
+
+      result.push(leadObj);
+      continue;
+    }
+
     const rawAddress = row["כתובת"] || row["מספר בניין"] || "";
     if (!rawAddress && !row["ועד הבית"] && !row["טלפון"]) continue;
 
@@ -703,7 +780,13 @@ export default function Leads({
       const allParsedLeads: Omit<Lead, "id">[] = [];
 
       for (const sheetName of workbook.SheetNames) {
-        if (sheetName.includes("תבנית")) continue;
+        if (
+          sheetName.includes("תבנית") ||
+          sheetName.includes("סיכום") ||
+          sheetName.includes("עם מספר טלפון בלבד")
+        ) {
+          continue;
+        }
         const sheet = workbook.Sheets[sheetName];
         const rows = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, {
           defval: "",
