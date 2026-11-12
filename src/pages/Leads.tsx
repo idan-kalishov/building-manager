@@ -149,6 +149,10 @@ function parseNumberField(val: any): number | undefined {
   return match ? Number(match[0]) : undefined;
 }
 
+function hasPhoneNumber(phone: string | undefined): boolean {
+  return Boolean(phone?.trim() && /\d/.test(phone));
+}
+
 function parseSheetRowsToLeads(
   rows: Record<string, any>[],
   sheetName: string,
@@ -185,17 +189,16 @@ function parseSheetRowsToLeads(
         [getCellText("שם פרטי"), getCellText("שם משפחה")]
           .filter(Boolean)
           .join(" ");
-      const phone =
-        [
-          getCellText("טלפון ראשי"),
-          getCellText("נייד 1"),
-          getCellText("נייד 2"),
-          getCellText("טלפון בית"),
-          getCellText("טלפון עבודה"),
-        ].find(Boolean) || "—";
+      const phone = [
+        getCellText("טלפון ראשי"),
+        getCellText("נייד 1"),
+        getCellText("נייד 2"),
+        getCellText("טלפון בית"),
+        getCellText("טלפון עבודה"),
+      ].find(Boolean);
       const email = getCellText("אימייל");
 
-      if (!address && !name && phone === "—" && !email) continue;
+      if (!phone || !hasPhoneNumber(phone)) continue;
 
       const tenants = getCellText("שוכרים בדירה");
       const notes = tenants ? `שוכרים בדירה: ${tenants}` : undefined;
@@ -247,7 +250,8 @@ function parseSheetRowsToLeads(
         : String(rawAddress).trim();
 
     const name = String(row["ועד הבית"] || "").trim() || `ועד בית - ${address}`;
-    const phone = String(row["טלפון"] || "").trim() || "—";
+    const phone = String(row["טלפון"] || "").trim();
+    if (!hasPhoneNumber(phone)) continue;
     const email = String(row["אימייל"] || "").trim();
     const currentCompany = String(row["חברה מתחרה"] || "").trim();
 
@@ -827,6 +831,7 @@ export default function Leads({
 
   const filteredLeads = useMemo(() => {
     const base = leads.filter((l) => {
+      if (!hasPhoneNumber(l.phone)) return false;
       const matchSearch =
         !search ||
         l.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -841,11 +846,16 @@ export default function Leads({
 
   const stats = useMemo(
     () => ({
-      newCount: leads.filter((l) => l.status === "new").length,
-      activeCount: leads.filter((l) =>
-        ["contacted", "proposal", "negotiation"].includes(l.status),
+      newCount: leads.filter(
+        (l) => hasPhoneNumber(l.phone) && l.status === "new",
       ).length,
-      closedMonth: leads.filter((l) => l.status === "closed").length,
+      activeCount: leads.filter((l) =>
+        hasPhoneNumber(l.phone) &&
+          ["contacted", "proposal", "negotiation"].includes(l.status),
+      ).length,
+      closedMonth: leads.filter(
+        (l) => hasPhoneNumber(l.phone) && l.status === "closed",
+      ).length,
     }),
     [leads],
   );
@@ -900,7 +910,9 @@ export default function Leads({
           <span>נסגרו החודש</span>
         </div>
         <div className="flex items-center gap-2 bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl font-bold text-sm shadow sm:mr-auto">
-          <span className="text-lg font-black">{leads.length}</span>
+          <span className="text-lg font-black">
+            {leads.filter((lead) => hasPhoneNumber(lead.phone)).length}
+          </span>
           <span>סה"כ</span>
         </div>
       </div>
