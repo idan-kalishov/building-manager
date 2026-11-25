@@ -184,17 +184,10 @@ export default function Dashboard() {
       timestamp: new Date().toISOString(),
     };
 
-    // If due date was updated, update the task's dueDate
-    const updatedTask: any = {
-      ...task,
+    await updateTask(taskId, {
       updates: [...(task.updates || []), newUpdate],
-    };
-
-    if (updateData.newDueDate) {
-      updatedTask.dueDate = updateData.newDueDate;
-    }
-
-    await updateTask(taskId, updatedTask);
+      ...(updateData.newDueDate ? { dueDate: updateData.newDueDate } : {}),
+    });
     setShowAddUpdateForTask(null);
   };
 

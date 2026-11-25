@@ -30,8 +30,8 @@ export default function AddUpdateForm({
     onAddUpdate({
       technician,
       message: message.trim(),
-      oldDueDate: updateDueDate ? currentDueDate : undefined,
-      newDueDate: updateDueDate ? newDueDate : undefined,
+      ...(updateDueDate && currentDueDate ? { oldDueDate: currentDueDate } : {}),
+      ...(updateDueDate && newDueDate ? { newDueDate } : {}),
     });
 
     // Reset form
