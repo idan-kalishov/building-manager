@@ -137,16 +137,28 @@ export default function Dashboard() {
     const taskData = {
       ...form,
       updates: form.updates || [],
-      contactPersons: contactPersons,
+      contactPersons: contactPersons.map((person) => ({
+        id: person.id,
+        name: person.name || "",
+        phone: String(person.phone || ""),
+        ...(person.role ? { role: person.role } : {}),
+        ...(person.notes ? { notes: person.notes } : {}),
+      })),
       notes: taskNotes,
       supplierId: selectedSupplierId,
       supplierName: selectedSupplierName,
     };
 
-    if (editing?.id) {
-      await updateTask(editing.id, taskData);
-    } else {
-      await addTask(taskData as Omit<Task, "id">);
+    try {
+      if (editing?.id) {
+        await updateTask(editing.id, taskData);
+      } else {
+        await addTask(taskData as Omit<Task, "id">);
+      }
+    } catch (error) {
+      console.error("Failed to save task", error);
+      alert("שמירת המשימה נכשלה. הפרטים נשארו פתוחים—נסו שוב.");
+      return;
     }
     setShowForm(false);
     setForm(EMPTY_TASK);
@@ -470,15 +482,48 @@ export default function Dashboard() {
                         <p className="mb-2 text-sm font-semibold text-gray-500">
                           אנשי קשר
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid gap-3 sm:grid-cols-2">
                           {task.contactPersons.map((person) => (
-                            <span
+                            <div
                               key={person.id}
-                              className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                              className="flex min-w-0 items-start gap-3 rounded-xl border border-gray-200 bg-white p-3 shadow-sm"
                             >
-                              👤 {person.name} · 📞 {person.phone}
-                              {person.role && ` · ${person.role}`}
-                            </span>
+                              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-xl text-blue-700">
+                                👤
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="break-words text-base font-semibold text-gray-900">
+                                    {person.name || "איש קשר"}
+                                  </span>
+                                  {person.role && (
+                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
+                                      {person.role}
+                                    </span>
+                                  )}
+                                </div>
+                                {person.phone ? (
+                                  <a
+                                    href={`tel:${person.phone.replace(/[^\d+]/g, "")}`}
+                                    dir="ltr"
+                                    className="mt-2 inline-flex max-w-full items-center gap-2 rounded-lg bg-green-50 px-3 py-2 text-left text-base font-semibold text-green-700 hover:bg-green-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400"
+                                    aria-label={`התקשר אל ${person.name || "איש קשר"} במספר ${person.phone}`}
+                                  >
+                                    <span aria-hidden="true">📞</span>
+                                    <span className="break-all">{person.phone}</span>
+                                  </a>
+                                ) : (
+                                  <span className="mt-2 block text-sm text-gray-500">
+                                    אין מספר טלפון
+                                  </span>
+                                )}
+                                {person.notes && (
+                                  <p className="mt-2 break-words text-sm text-gray-600">
+                                    {person.notes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           ))}
                         </div>
                       </div>
