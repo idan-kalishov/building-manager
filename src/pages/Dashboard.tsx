@@ -615,7 +615,7 @@ export default function Dashboard() {
                                 )}
                               </div>
                               {!task.done && !isEditing && (
-                                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="flex shrink-0 gap-2">
                                   <button
                                     onClick={() =>
                                       startEditUpdate(task.id!, update)
