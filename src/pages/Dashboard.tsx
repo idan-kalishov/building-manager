@@ -265,16 +265,6 @@ export default function Dashboard() {
     });
   };
 
-  const stats = useMemo(
-    () => ({
-      total: tasks.filter((t) => !t.done).length,
-      overdue: tasks.filter((t) => isOverdue(t.dueDate, t.done)).length,
-      today: tasks.filter((t) => isToday(t.dueDate) && !t.done).length,
-      done: tasks.filter((t) => t.done).length,
-    }),
-    [tasks],
-  );
-
   const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
   const filteredTasks = useMemo(() => {
@@ -298,48 +288,8 @@ export default function Dashboard() {
   }, [tasks, filter]);
 
   return (
-    <div dir="rtl" className="max-w-3xl mx-auto pb-20">
+    <div dir="rtl" className="max-w-5xl mx-auto pb-20">
       <h1 className="text-2xl font-bold mb-4">📋 לוח משימות</h1>
-
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        {[
-          {
-            label: "פתוחות",
-            value: stats.total,
-            color: "bg-blue-600",
-            onClick: () => setFilter("all"),
-          },
-          {
-            label: "להיום",
-            value: stats.today,
-            color: "bg-orange-500",
-            onClick: () => setFilter("today"),
-          },
-          {
-            label: "באיחור",
-            value: stats.overdue,
-            color: "bg-red-600",
-            onClick: () => setFilter("overdue"),
-          },
-          {
-            label: "הושלמו",
-            value: stats.done,
-            color: "bg-green-600",
-            onClick: () => setFilter("done"),
-          },
-        ].map((s) => (
-          <button
-            key={s.label}
-            onClick={s.onClick}
-            className={`${s.color} text-white rounded-xl p-3 flex items-center gap-3 shadow
-              hover:opacity-90 active:scale-95 transition-all text-right`}
-          >
-            <span className="text-3xl font-black">{s.value}</span>
-            <span className="text-sm font-medium">{s.label}</span>
-          </button>
-        ))}
-      </div>
 
       {/* Filters + Add */}
       <div className="flex gap-2 mb-4 flex-wrap">
@@ -394,141 +344,169 @@ export default function Dashboard() {
           return (
             <div
               key={task.id}
-              className={`bg-white rounded-2xl border shadow-md transition-all
+              className="grid grid-cols-[minmax(4.5rem,0.7fr)_minmax(0,3fr)] items-stretch gap-2 sm:grid-cols-[minmax(7rem,0.8fr)_minmax(0,3fr)] sm:gap-3"
+            >
+              <div
+                className={`flex min-w-0 flex-col items-center justify-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-2 py-4 text-center text-sm font-semibold text-blue-900 sm:flex-row sm:items-start sm:justify-center sm:px-3 sm:py-5 sm:text-base
+                  ${task.done ? "opacity-60" : ""}`}
+                aria-label={`בניין: ${task.buildingAddress || "לא צוין"}`}
+              >
+                <span className="shrink-0 text-xl sm:text-2xl" aria-hidden="true">
+                  🏢
+                </span>
+                <span className="min-w-0 break-words leading-snug">
+                  {task.buildingAddress || "לא צוין"}
+                </span>
+              </div>
+              <div
+                className={`min-w-0 overflow-hidden rounded-2xl border bg-white shadow-sm transition-all
                 ${overdue ? "border-red-400 bg-red-50/50" : pri.border}
                 ${task.done ? "opacity-50" : ""}`}
-            >
-              {/* Task Header - Clickable */}
-              <div
-                className="p-5 md:p-6 flex gap-4 items-start cursor-pointer hover:bg-gray-50/50 rounded-2xl transition-colors"
-                onClick={() => toggleExpand(task.id ?? "")}
               >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-start gap-2 flex-wrap">
-                    <p
-                      className={`font-bold text-lg md:text-xl leading-relaxed ${task.done ? "line-through text-gray-400" : "text-gray-900"}`}
-                    >
-                      {task.title}
-                    </p>
-                    <span
-                      className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${pri.dot}`}
-                    />
-                    {hasUpdates && (
-                      <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
-                        📝 {task.updates!.length}
-                      </span>
-                    )}
-                    <span className="mr-auto text-gray-500 text-base">
-                      {isExpanded ? "▲" : "▼"}
-                    </span>
-                  </div>
-
-                  {task.description && (
-                    <p className="text-base text-gray-600 mt-2 leading-relaxed">
-                      {task.description}
-                    </p>
-                  )}
-
-                  <div className="flex gap-3 mt-3 flex-wrap items-center">
-                    {task.buildingAddress && (
-                      <span className="text-sm md:text-base text-gray-600">
-                        🏢 {task.buildingAddress}
-                      </span>
-                    )}
-                    {task.dueDate && (
-                      <span
-                        className={`text-sm md:text-base font-medium
-                        ${overdue ? "text-red-600" : today ? "text-orange-500" : "text-gray-500"}`}
-                      >
-                        📅 {overdue ? "⚠️ " : ""}
-                        {task.dueDate}
-                        {today && !overdue ? " (היום)" : ""}
-                      </span>
-                    )}
-                    <span className={`text-sm md:text-base font-medium ${pri.text}`}>
-                      {pri.label}
-                    </span>
-                    {/* Supplier Display */}
-                    {task.supplierName && (
-                      <span className="text-sm md:text-base text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
-                        🔧 {task.supplierName}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Contact Persons Display */}
-                  {task.contactPersons && task.contactPersons.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3">
-                      {task.contactPersons.map((person) => (
-                        <span
-                          key={person.id}
-                          className="inline-flex items-center gap-2 text-sm md:text-base bg-blue-50 text-blue-800 px-3 py-1.5 rounded-full"
-                        >
-                          👤 {person.name}
-                          <span className="text-gray-400">|</span>
-                          📞 {person.phone}
-                          {person.role && (
-                            <span className="text-gray-500 text-xs">
-                              ({person.role})
-                            </span>
-                          )}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Notes Display */}
-                  {task.notes && (
-                    <div className="mt-3 text-sm md:text-base text-gray-600 border-r-2 border-gray-300 pr-3">
-                      📝 {task.notes}
-                    </div>
-                  )}
-                </div>
-
-                {/* Actions - stop propagation */}
-                <div
-                  className="flex gap-2 flex-shrink-0 items-start mt-0.5"
-                  onClick={(e) => e.stopPropagation()}
+              {/* Task Header - Clickable */}
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-x-3 gap-y-3 p-3 md:gap-4 md:p-4">
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  onClick={() => toggleExpand(task.id ?? "")}
+                  className="col-span-2 flex w-full min-w-0 items-center gap-2 rounded-xl py-2 text-right transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 md:col-span-1"
+                  aria-label={`משימה: ${task.title}`}
                 >
+                  <span
+                    className={`h-3 w-3 shrink-0 rounded-full ${pri.dot}`}
+                    aria-label={pri.label}
+                  />
+                  <span
+                    className={`min-w-0 flex-1 break-words text-base font-bold leading-snug md:text-lg ${task.done ? "line-through text-gray-400" : "text-gray-900"}`}
+                  >
+                    {task.title}
+                  </span>
+                  {hasUpdates && (
+                    <span className="hidden shrink-0 rounded-full bg-blue-100 px-2 py-1 text-sm text-blue-700 sm:inline">
+                      📝 {task.updates!.length}
+                    </span>
+                  )}
+                  <span className="shrink-0 text-gray-500" aria-hidden="true">
+                    {isExpanded ? "▲" : "▼"}
+                  </span>
+                </button>
+
+                {/* Actions */}
+                <div className="col-span-2 flex items-center justify-end gap-2 border-t border-gray-100 pt-2 md:col-span-1 md:border-0 md:pt-0">
                   {!task.done ? (
                     <button
                       onClick={() => handleDoneClick(task)}
-                      className="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors"
+                      aria-label="סיים משימה"
+                      className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
                     >
                       ✓ סיים
                     </button>
                   ) : (
                     <button
                       onClick={() => toggleDone(task)}
-                      className="text-sm border border-gray-300 text-gray-500 px-3 py-2 rounded-lg hover:bg-gray-50"
+                      aria-label="פתח משימה מחדש"
+                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
                     >
                       ↩️ פתח מחדש
                     </button>
                   )}
                   <button
                     onClick={() => openEdit(task)}
-                    className="text-sm border border-blue-300 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-50"
+                    aria-label="ערוך משימה"
+                    className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleDelete(task)}
-                    className="text-sm border border-red-300 text-red-600 px-3 py-2 rounded-lg hover:bg-red-50"
+                    aria-label="מחק משימה"
+                    className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
                   >
                     🗑️
                   </button>
                 </div>
               </div>
 
-              {/* Accordion Content - Updates Section */}
+              {/* Expanded Task Details and Updates */}
               {isExpanded && (
-                <div className="border-t px-4 py-3 bg-gray-50/50 rounded-b-xl">
+                <div className="border-t bg-gray-50/70 px-4 py-4 md:px-6">
+                  <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {task.description && (
+                      <div className="rounded-xl border border-gray-100 bg-white p-3 sm:col-span-2 lg:col-span-3">
+                        <p className="mb-1 text-sm font-semibold text-gray-500">
+                          פירוט
+                        </p>
+                        <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-800">
+                          {task.description}
+                        </p>
+                      </div>
+                    )}
+                    {task.dueDate && (
+                      <div className="rounded-xl border border-gray-100 bg-white p-3">
+                        <p className="mb-1 text-sm font-semibold text-gray-500">
+                          תאריך יעד
+                        </p>
+                        <p
+                          className={`text-base font-medium ${overdue ? "text-red-600" : today ? "text-orange-600" : "text-gray-800"}`}
+                        >
+                          📅 {task.dueDate}
+                          {overdue ? " · באיחור" : today ? " · היום" : ""}
+                        </p>
+                      </div>
+                    )}
+                    <div className="rounded-xl border border-gray-100 bg-white p-3">
+                      <p className="mb-1 text-sm font-semibold text-gray-500">
+                        עדיפות
+                      </p>
+                      <p className={`text-base font-medium ${pri.text}`}>
+                        {pri.label}
+                      </p>
+                    </div>
+                    {task.supplierName && (
+                      <div className="rounded-xl border border-gray-100 bg-white p-3">
+                        <p className="mb-1 text-sm font-semibold text-gray-500">
+                          ספק
+                        </p>
+                        <p className="text-base text-blue-700">
+                          🔧 {task.supplierName}
+                        </p>
+                      </div>
+                    )}
+                    {task.contactPersons?.length ? (
+                      <div className="rounded-xl border border-gray-100 bg-white p-3 sm:col-span-2">
+                        <p className="mb-2 text-sm font-semibold text-gray-500">
+                          אנשי קשר
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {task.contactPersons.map((person) => (
+                            <span
+                              key={person.id}
+                              className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900"
+                            >
+                              👤 {person.name} · 📞 {person.phone}
+                              {person.role && ` · ${person.role}`}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    {task.notes && (
+                      <div className="rounded-xl border border-gray-100 bg-white p-3 sm:col-span-2 lg:col-span-3">
+                        <p className="mb-1 text-sm font-semibold text-gray-500">
+                          הערות
+                        </p>
+                        <p className="whitespace-pre-wrap text-base leading-relaxed text-gray-800">
+                          {task.notes}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                   <div className="space-y-3">
                     {/* Header with add button */}
                     <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <h4 className="text-base font-semibold text-gray-700 flex items-center gap-2">
                         📋 היסטוריית עדכונים
-                        <span className="text-xs bg-gray-200 px-2 py-0.5 rounded-full">
+                        <span className="rounded-full bg-gray-200 px-2 py-1 text-sm">
                           {task.updates?.length || 0}
                         </span>
                       </h4>
@@ -539,7 +517,7 @@ export default function Dashboard() {
                               showAddForm ? null : task.id!,
                             )
                           }
-                          className="text-xs bg-blue-500 text-white px-2 py-1 rounded-lg hover:bg-blue-600"
+                          className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
                         >
                           {showAddForm ? "− ביטול" : "+ הוסף עדכון"}
                         </button>
@@ -687,6 +665,7 @@ export default function Dashboard() {
                   </div>
                 </div>
               )}
+            </div>
             </div>
           );
         })}
