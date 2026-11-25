@@ -132,7 +132,7 @@ function EditableField({
   return (
     <div className="py-2 border-b border-gray-100 last:border-0">
       <div className="flex justify-between items-center gap-3">
-        <span className="text-gray-500 text-sm">{label}</span>
+        <span className="text-gray-600 text-base">{label}</span>
         {editing ? (
           <div className="flex flex-1 items-center justify-end gap-2">
             {options ? (
@@ -140,7 +140,7 @@ function EditableField({
                 aria-label={label}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                className="min-w-0 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="min-w-0 border rounded-lg px-2 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 autoFocus
               >
                 {options.map((option) => (
@@ -154,7 +154,7 @@ function EditableField({
                 aria-label={label}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                className="min-w-0 flex-1 border rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="min-w-0 flex-1 border rounded-lg px-2 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 rows={2}
                 autoFocus
               />
@@ -164,7 +164,7 @@ function EditableField({
                 type={type}
                 value={draft}
                 onChange={(event) => setDraft(event.target.value)}
-                className="min-w-0 flex-1 border rounded-lg px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-300"
+                className="min-w-0 flex-1 border rounded-lg px-2 py-2 text-lg text-right focus:outline-none focus:ring-2 focus:ring-blue-300"
                 autoFocus
               />
             )}
@@ -172,7 +172,7 @@ function EditableField({
               type="button"
               onClick={save}
               disabled={saving}
-              className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              className="text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
             >
               {saving ? "שומר..." : "שמירה"}
             </button>
@@ -180,7 +180,7 @@ function EditableField({
               type="button"
               onClick={() => setEditing(false)}
               disabled={saving}
-              className="text-xs text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              className="text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
             >
               ביטול
             </button>
@@ -191,7 +191,7 @@ function EditableField({
               <a
                 href={linkHref}
                 aria-label={`${label}: ${String(currentValue)}`}
-                className="cursor-pointer text-green-700 text-sm font-medium text-right max-w-[65%] break-words hover:text-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 rounded"
+                className="cursor-pointer text-green-700 text-base font-medium text-right max-w-[65%] break-words hover:text-green-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-300 rounded"
               >
                 {displayValue
                   ? displayValue(currentValue)
@@ -204,7 +204,7 @@ function EditableField({
                 type="button"
                 onClick={startEditing}
                 aria-label={`עריכת ${label}`}
-                className="cursor-pointer text-gray-800 text-sm font-medium text-right max-w-[65%] break-words hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 rounded"
+                className="cursor-pointer text-gray-800 text-base font-medium text-right max-w-[65%] break-words hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 rounded"
               >
                 {displayValue
                   ? displayValue(currentValue)
@@ -218,7 +218,7 @@ function EditableField({
                 type="button"
                 onClick={startEditing}
                 aria-label={`עריכת ${label}`}
-                className="cursor-pointer text-gray-400 text-xs hover:text-blue-700"
+                className="cursor-pointer text-gray-500 text-sm hover:text-blue-700"
               >
                 ✏️
               </button>
@@ -227,7 +227,7 @@ function EditableField({
           </>
         )}
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 }
@@ -485,7 +485,7 @@ export default function LeadDetailModal({
           />
 
           <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+            <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
               {isPropertyLead ? "🏠 פרטי הנכס" : "🏢 פרטי הבניין"}
             </h3>
             <EditableField
@@ -510,7 +510,7 @@ export default function LeadDetailModal({
           </section>
 
           <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+            <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
               👤 פרטי קשר
             </h3>
             <div className="space-y-3">
@@ -520,14 +520,14 @@ export default function LeadDetailModal({
                   className="rounded-lg border border-gray-200 bg-gray-50 px-3"
                 >
                   <div className="flex items-center justify-between border-b border-gray-200">
-                    <span className="py-2 text-xs font-semibold text-gray-500">
+                    <span className="py-2 text-sm font-semibold text-gray-600">
                       איש קשר {index + 1}
                     </span>
                     {contactPersons.length > 1 && (
                       <button
                         type="button"
                         onClick={() => deleteContact(person.id)}
-                        className="py-2 text-xs text-red-500 hover:text-red-700"
+                        className="py-2 text-sm text-red-500 hover:text-red-700"
                       >
                         הסרה
                       </button>
@@ -566,7 +566,7 @@ export default function LeadDetailModal({
                       name: event.target.value,
                     }))
                   }
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full rounded-lg border px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 <input
                   aria-label="טלפון איש קשר חדש"
@@ -579,13 +579,13 @@ export default function LeadDetailModal({
                       phone: event.target.value,
                     }))
                   }
-                  className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full rounded-lg border px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={addContact}
-                    className="flex-1 rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                    className="flex-1 rounded-lg bg-blue-600 py-3 text-base font-medium text-white hover:bg-blue-700"
                   >
                     הוספה
                   </button>
@@ -595,7 +595,7 @@ export default function LeadDetailModal({
                       setShowAddContact(false);
                       setContactError("");
                     }}
-                    className="rounded-lg border px-3 py-2 text-sm text-gray-600 hover:bg-white"
+                    className="rounded-lg border px-3 py-3 text-base text-gray-600 hover:bg-white"
                   >
                     ביטול
                   </button>
@@ -608,12 +608,12 @@ export default function LeadDetailModal({
                 setShowAddContact((visible) => !visible);
                 setContactError("");
               }}
-              className="mt-3 w-full rounded-lg border border-dashed border-blue-300 py-2 text-sm text-blue-600 hover:bg-blue-50"
+              className="mt-3 w-full rounded-lg border border-dashed border-blue-300 py-3 text-base text-blue-600 hover:bg-blue-50"
             >
               + הוספת איש קשר
             </button>
             {contactError && (
-              <p role="alert" className="mt-2 text-xs text-red-600">
+              <p role="alert" className="mt-2 text-sm text-red-600">
                 {contactError}
               </p>
             )}
@@ -629,7 +629,7 @@ export default function LeadDetailModal({
 
           {!isPropertyLead && (
             <section>
-              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+              <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
                 🏢 מצב נוכחי
               </h3>
               <EditableField
@@ -657,7 +657,7 @@ export default function LeadDetailModal({
 
           {!isPropertyLead && (
             <section>
-              <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+              <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
                 💰 הצעה שלנו
               </h3>
               <EditableField
@@ -691,7 +691,7 @@ export default function LeadDetailModal({
           )}
 
           <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+            <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
               {isPropertyLead ? "📅 מעקב" : "📅 תהליך מכירה"}
             </h3>
             {!isPropertyLead && (
@@ -753,7 +753,7 @@ export default function LeadDetailModal({
           {callSummaries.length > 0 && (
             <section>
               <div className="flex items-center justify-between border-b pb-1 mb-3">
-                <h3 className="font-bold text-gray-700 text-sm">
+                <h3 className="font-bold text-gray-700 text-base">
                   🎙️ שיחות מוקלטות
                 </h3>
                 <span className="text-[11px] bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full font-medium">
@@ -776,7 +776,7 @@ export default function LeadDetailModal({
           />
 
           <section>
-            <h3 className="font-bold text-gray-700 mb-2 text-sm border-b pb-1">
+            <h3 className="font-bold text-gray-700 mb-2 text-base border-b pb-1">
               📌 שדות נוספים
             </h3>
             {(lead.customFields || []).map((field) => (
@@ -784,17 +784,17 @@ export default function LeadDetailModal({
                 key={field.id}
                 className="flex justify-between items-center py-2 border-b border-gray-100 gap-2"
               >
-                <span className="text-gray-500 text-sm w-1/3">
+                <span className="text-gray-600 text-base w-1/3">
                   {field.label}
                 </span>
                 <input
-                  className="text-sm text-gray-800 font-medium text-right flex-1 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none bg-transparent"
+                  className="text-base text-gray-800 font-medium text-right flex-1 border-b border-transparent hover:border-gray-300 focus:border-blue-400 outline-none bg-transparent"
                   value={field.value}
                   onChange={(e) => handleFieldChange(field.id, e.target.value)}
                 />
                 <button
                   onClick={() => setConfirmDelete(field.id)}
-                  className="text-red-400 hover:text-red-600 text-xs px-1"
+                  className="text-red-500 hover:text-red-600 text-sm px-1"
                 >
                   ✕
                 </button>
@@ -802,7 +802,7 @@ export default function LeadDetailModal({
             ))}
             <button
               onClick={() => setShowAddField(true)}
-              className="mt-3 text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg w-full py-2"
+              className="mt-3 text-sm text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg w-full py-3"
             >
               + הוסף שדה
             </button>
@@ -813,13 +813,13 @@ export default function LeadDetailModal({
         <div className="flex gap-2 p-4 border-t">
           <button
             onClick={handleDelete}
-            className="border border-red-400 text-red-500 px-4 py-2 rounded-lg hover:bg-red-50 text-sm"
+            className="border border-red-400 text-red-500 px-4 py-3 rounded-lg hover:bg-red-50 text-base"
           >
             🗑️
           </button>
           <button
             onClick={onClose}
-            className="border py-2 px-4 rounded-lg hover:bg-gray-50 text-gray-600 text-sm"
+            className="border py-3 px-4 rounded-lg hover:bg-gray-50 text-gray-600 text-base"
           >
             סגור
           </button>

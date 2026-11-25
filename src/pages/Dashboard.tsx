@@ -12,6 +12,8 @@ import ConfirmModal from "../components/ConfirmModal";
 import ContactPersonsSection from "../components/ContactPersonsSection";
 import AddUpdateForm from "../components/updates/AddUpdateForm.tsx";
 import SupplierSelector from "../components/suppliers/SupplierSelector.tsx";
+import BuildingAddressInput from "../components/BuildingAddressInput";
+import DueDatePicker from "../components/DueDatePicker";
 
 const PRIORITY_CONFIG: Record<
   TaskPriority,
@@ -392,50 +394,50 @@ export default function Dashboard() {
           return (
             <div
               key={task.id}
-              className={`bg-white rounded-xl border shadow-sm transition-all
+              className={`bg-white rounded-2xl border shadow-md transition-all
                 ${overdue ? "border-red-400 bg-red-50/50" : pri.border}
                 ${task.done ? "opacity-50" : ""}`}
             >
               {/* Task Header - Clickable */}
               <div
-                className="p-4 flex gap-3 items-start cursor-pointer hover:bg-gray-50/50 rounded-xl transition-colors"
+                className="p-5 md:p-6 flex gap-4 items-start cursor-pointer hover:bg-gray-50/50 rounded-2xl transition-colors"
                 onClick={() => toggleExpand(task.id ?? "")}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start gap-2 flex-wrap">
                     <p
-                      className={`font-semibold text-sm ${task.done ? "line-through text-gray-400" : "text-gray-800"}`}
+                      className={`font-bold text-lg md:text-xl leading-relaxed ${task.done ? "line-through text-gray-400" : "text-gray-900"}`}
                     >
                       {task.title}
                     </p>
                     <span
-                      className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${pri.dot}`}
+                      className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${pri.dot}`}
                     />
                     {hasUpdates && (
-                      <span className="text-xs bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">
+                      <span className="text-sm bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
                         📝 {task.updates!.length}
                       </span>
                     )}
-                    <span className="mr-auto text-gray-400 text-sm">
+                    <span className="mr-auto text-gray-500 text-base">
                       {isExpanded ? "▲" : "▼"}
                     </span>
                   </div>
 
                   {task.description && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-base text-gray-600 mt-2 leading-relaxed">
                       {task.description}
                     </p>
                   )}
 
-                  <div className="flex gap-3 mt-1.5 flex-wrap">
+                  <div className="flex gap-3 mt-3 flex-wrap items-center">
                     {task.buildingAddress && (
-                      <span className="text-xs text-gray-500">
+                      <span className="text-sm md:text-base text-gray-600">
                         🏢 {task.buildingAddress}
                       </span>
                     )}
                     {task.dueDate && (
                       <span
-                        className={`text-xs font-medium
+                        className={`text-sm md:text-base font-medium
                         ${overdue ? "text-red-600" : today ? "text-orange-500" : "text-gray-500"}`}
                       >
                         📅 {overdue ? "⚠️ " : ""}
@@ -443,12 +445,12 @@ export default function Dashboard() {
                         {today && !overdue ? " (היום)" : ""}
                       </span>
                     )}
-                    <span className={`text-xs font-medium ${pri.text}`}>
+                    <span className={`text-sm md:text-base font-medium ${pri.text}`}>
                       {pri.label}
                     </span>
                     {/* Supplier Display */}
                     {task.supplierName && (
-                      <span className="text-xs text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                      <span className="text-sm md:text-base text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
                         🔧 {task.supplierName}
                       </span>
                     )}
@@ -456,17 +458,17 @@ export default function Dashboard() {
 
                   {/* Contact Persons Display */}
                   {task.contactPersons && task.contactPersons.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {task.contactPersons.map((person) => (
                         <span
                           key={person.id}
-                          className="inline-flex items-center gap-1 text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full"
+                          className="inline-flex items-center gap-2 text-sm md:text-base bg-blue-50 text-blue-800 px-3 py-1.5 rounded-full"
                         >
                           👤 {person.name}
                           <span className="text-gray-400">|</span>
                           📞 {person.phone}
                           {person.role && (
-                            <span className="text-gray-400 text-[10px]">
+                            <span className="text-gray-500 text-xs">
                               ({person.role})
                             </span>
                           )}
@@ -477,7 +479,7 @@ export default function Dashboard() {
 
                   {/* Notes Display */}
                   {task.notes && (
-                    <div className="mt-1 text-xs text-gray-500 border-r-2 border-gray-300 pr-2">
+                    <div className="mt-3 text-sm md:text-base text-gray-600 border-r-2 border-gray-300 pr-3">
                       📝 {task.notes}
                     </div>
                   )}
@@ -485,33 +487,33 @@ export default function Dashboard() {
 
                 {/* Actions - stop propagation */}
                 <div
-                  className="flex gap-1 flex-shrink-0 items-start mt-0.5"
+                  className="flex gap-2 flex-shrink-0 items-start mt-0.5"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {!task.done ? (
                     <button
                       onClick={() => handleDoneClick(task)}
-                      className="text-xs bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium transition-colors"
+                      className="text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-lg font-semibold transition-colors"
                     >
                       ✓ סיים
                     </button>
                   ) : (
                     <button
                       onClick={() => toggleDone(task)}
-                      className="text-xs border border-gray-300 text-gray-400 px-2 py-1.5 rounded-lg hover:bg-gray-50"
+                      className="text-sm border border-gray-300 text-gray-500 px-3 py-2 rounded-lg hover:bg-gray-50"
                     >
                       ↩️ פתח מחדש
                     </button>
                   )}
                   <button
                     onClick={() => openEdit(task)}
-                    className="text-xs border border-blue-300 text-blue-600 px-2 py-1.5 rounded hover:bg-blue-50"
+                    className="text-sm border border-blue-300 text-blue-700 px-3 py-2 rounded-lg hover:bg-blue-50"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleDelete(task)}
-                    className="text-xs border border-red-300 text-red-500 px-2 py-1.5 rounded hover:bg-red-50"
+                    className="text-sm border border-red-300 text-red-600 px-3 py-2 rounded-lg hover:bg-red-50"
                   >
                     🗑️
                   </button>
@@ -699,8 +701,8 @@ export default function Dashboard() {
             if (e.target === e.currentTarget) setShowForm(false);
           }}
         >
-          <div className="bg-white rounded-2xl w-full max-w-md flex flex-col max-h-[90vh]">
-            <div className="flex justify-between items-center p-4 border-b">
+          <div className="bg-white rounded-2xl w-full max-w-xl flex flex-col max-h-[92vh]">
+            <div className="flex justify-between items-center p-5 md:p-6 border-b">
               <h2 className="text-lg font-bold">
                 {editing ? "עריכת משימה" : "משימה חדשה"}
               </h2>
@@ -712,9 +714,9 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <div className="p-4 space-y-3 overflow-y-auto flex-1">
+            <div className="p-5 md:p-6 space-y-5 overflow-y-auto flex-1">
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   כותרת *
                 </label>
                 <input
@@ -723,12 +725,12 @@ export default function Dashboard() {
                     setForm((p) => ({ ...p, title: e.target.value }))
                   }
                   placeholder="לדוגמה: לבדוק מעלית בבניין..."
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   פירוט
                 </label>
                 <textarea
@@ -737,40 +739,36 @@ export default function Dashboard() {
                     setForm((p) => ({ ...p, description: e.target.value }))
                   }
                   rows={2}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                  className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   בניין קשור
                 </label>
-                <input
+                <BuildingAddressInput
                   value={form.buildingAddress || ""}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, buildingAddress: e.target.value }))
+                  onChange={(buildingAddress) =>
+                    setForm((p) => ({ ...p, buildingAddress }))
                   }
-                  placeholder="כתובת הבניין"
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   תאריך יעד
                 </label>
-                <input
-                  type="date"
+                <DueDatePicker
                   value={form.dueDate || ""}
-                  onChange={(e) =>
-                    setForm((p) => ({ ...p, dueDate: e.target.value }))
+                  onChange={(dueDate) =>
+                    setForm((p) => ({ ...p, dueDate }))
                   }
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   עדיפות
                 </label>
                 <div className="flex gap-2">
@@ -779,7 +777,7 @@ export default function Dashboard() {
                       key={p}
                       type="button"
                       onClick={() => setForm((d) => ({ ...d, priority: p }))}
-                      className={`flex-1 py-2 rounded-lg text-sm border transition-colors
+                      className={`flex-1 py-3 rounded-lg text-base border transition-colors
                         ${
                           form.priority === p
                             ? "bg-blue-600 text-white border-blue-600"
@@ -794,7 +792,7 @@ export default function Dashboard() {
 
               {/* Supplier Selector */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   🔧 ספק
                 </label>
                 <SupplierSelector
@@ -815,7 +813,7 @@ export default function Dashboard() {
 
               {/* Notes Section */}
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   📝 הערות
                 </label>
                 <textarea
@@ -823,21 +821,21 @@ export default function Dashboard() {
                   onChange={(e) => setTaskNotes(e.target.value)}
                   placeholder="הוסף הערות כלליות למשימה..."
                   rows={2}
-                  className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                  className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
                 />
               </div>
             </div>
 
-            <div className="flex gap-2 p-4 border-t">
+            <div className="flex gap-2 p-5 md:p-6 border-t text-base">
               <button
                 onClick={handleSave}
-                className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+                className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
               >
                 💾 שמור
               </button>
               <button
                 onClick={() => setShowForm(false)}
-                className="flex-1 border py-2 rounded-lg hover:bg-gray-50 text-gray-600"
+                className="flex-1 border py-3 rounded-lg hover:bg-gray-50 text-gray-600"
               >
                 ביטול
               </button>

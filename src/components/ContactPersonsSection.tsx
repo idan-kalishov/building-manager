@@ -78,16 +78,16 @@ export default function ContactPersonsSection({
   return (
     <div className="border rounded-lg p-3 bg-gray-50">
       <div className="flex items-center justify-between mb-2">
-        <label className="text-sm font-medium text-gray-700">
+        <label className="text-base font-medium text-gray-700">
           👤 אנשי קשר
-          <span className="text-xs text-gray-400 mr-2">
+          <span className="text-sm text-gray-500 mr-2">
             ({contactPersons.length})
           </span>
         </label>
         <button
           type="button"
           onClick={() => setShowAddForm(!showAddForm)}
-          className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+          className="text-sm bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600"
         >
           {showAddForm ? "− ביטול" : "+ הוסף"}
         </button>
@@ -103,7 +103,7 @@ export default function ContactPersonsSection({
                 setNewPerson((p) => ({ ...p, name: e.target.value }))
               }
               placeholder="שם מלא *"
-              className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="flex-1 border rounded px-2 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
             <input
               value={newPerson.phone}
@@ -112,7 +112,7 @@ export default function ContactPersonsSection({
               }
               placeholder="טלפון *"
               type="tel"
-              className="flex-1 border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="flex-1 border rounded px-2 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
             />
           </div>
           <input
@@ -121,7 +121,7 @@ export default function ContactPersonsSection({
               setNewPerson((p) => ({ ...p, role: e.target.value }))
             }
             placeholder="תפקיד (אופציונלי) - למשל: בעל דירה, נציג ועד"
-            className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-full border rounded px-2 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
           <input
             value={newPerson.notes || ""}
@@ -129,20 +129,20 @@ export default function ContactPersonsSection({
               setNewPerson((p) => ({ ...p, notes: e.target.value }))
             }
             placeholder="הערה (אופציונלי)"
-            className="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+            className="w-full border rounded px-2 py-2 text-base focus:outline-none focus:ring-2 focus:ring-blue-300"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={editingId ? handleUpdate : handleAdd}
-              className="flex-1 bg-green-600 text-white py-1.5 rounded text-sm hover:bg-green-700"
+              className="flex-1 bg-green-600 text-white py-2 rounded text-base hover:bg-green-700"
             >
               {editingId ? "עדכן" : "הוסף"}
             </button>
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 border py-1.5 rounded text-sm text-gray-600 hover:bg-gray-50"
+              className="flex-1 border py-2 rounded text-base text-gray-600 hover:bg-gray-50"
             >
               ביטול
             </button>
@@ -153,7 +153,7 @@ export default function ContactPersonsSection({
       {/* List of contacts */}
       <div className="space-y-1 max-h-40 overflow-y-auto">
         {contactPersons.length === 0 ? (
-          <div className="text-center py-2 text-gray-400 text-sm">
+          <div className="text-center py-2 text-gray-500 text-base">
             אין אנשי קשר
           </div>
         ) : (
@@ -164,14 +164,14 @@ export default function ContactPersonsSection({
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm truncate">
+                  <span className="font-medium text-base truncate">
                     {person.name}
                   </span>
-                  <span className="text-xs text-gray-500">
+                  <span className="text-sm text-gray-600">
                     📞 {person.phone}
                   </span>
                 </div>
-                <div className="flex gap-2 text-xs text-gray-400">
+                <div className="flex gap-2 text-sm text-gray-500">
                   {person.role && <span>🏷️ {person.role}</span>}
                   {person.notes && <span>📝 {person.notes}</span>}
                 </div>

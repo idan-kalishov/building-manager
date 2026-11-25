@@ -14,12 +14,12 @@ interface Props {
 
 const Field = ({ label, value, onChange, type = "text" }: any) => (
   <div className="flex flex-col gap-1">
-    <label className="text-sm font-medium text-gray-600">{label}</label>
+    <label className="text-base font-medium text-gray-700">{label}</label>
     <input
       type={type}
       value={value || ""}
       onChange={(e) => onChange(e.target.value)}
-      className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+      className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
     />
   </div>
 );
@@ -100,7 +100,7 @@ export default function LeadFormModal({
         </div>
 
         {/* Fields */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-3">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
           {isPropertyLead ? (
             <>
               <Field label="שם איש קשר *" {...f("name")} />
@@ -113,7 +113,7 @@ export default function LeadFormModal({
                 type="date"
               />
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   עדיפות
                 </label>
                 <div className="flex gap-2">
@@ -131,7 +131,7 @@ export default function LeadFormModal({
                           priority: priority.value as LeadPriority,
                         }))
                       }
-                      className={`flex-1 rounded-lg border py-2 text-sm transition-colors ${
+                      className={`flex-1 rounded-lg border py-3 text-base transition-colors ${
                         data.priority === priority.value
                           ? "border-blue-600 bg-blue-600 text-white"
                           : "border-gray-300 hover:bg-gray-50"
@@ -143,7 +143,7 @@ export default function LeadFormModal({
                 </div>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   סטטוס
                 </label>
                 <select
@@ -154,7 +154,7 @@ export default function LeadFormModal({
                       status: event.target.value as LeadStatus,
                     }))
                   }
-                  className="rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="rounded-lg border px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 >
                   <option value="new">ליד חדש</option>
                   <option value="contacted">יצירת קשר</option>
@@ -165,7 +165,7 @@ export default function LeadFormModal({
                 </select>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-600">
+                <label className="text-base font-medium text-gray-700">
                   הערות
                 </label>
                 <textarea
@@ -177,7 +177,7 @@ export default function LeadFormModal({
                     }))
                   }
                   rows={3}
-                  className="resize-none rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="resize-none rounded-lg border px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
             </>
@@ -185,7 +185,7 @@ export default function LeadFormModal({
             <>
           {/* עדיפות */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">עדיפות</label>
+            <label className="text-base font-medium text-gray-700">עדיפות</label>
             <div className="flex gap-2">
               {[
                 { v: "high", label: "🔴 גבוהה" },
@@ -198,7 +198,7 @@ export default function LeadFormModal({
                   onClick={() =>
                     setData((d) => ({ ...d, priority: p.v as LeadPriority }))
                   }
-                  className={`flex-1 py-2 rounded-lg text-sm border transition-colors
+                  className={`flex-1 py-3 rounded-lg text-base border transition-colors
                     ${
                       data.priority === p.v
                         ? "bg-blue-600 text-white border-blue-600"
@@ -234,7 +234,7 @@ export default function LeadFormModal({
 
           {/* וידוא */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">
+            <label className="text-base font-medium text-gray-700">
               וידוא קבלת ההצעה
             </label>
             <div className="flex gap-2">
@@ -243,7 +243,7 @@ export default function LeadFormModal({
                 onClick={() =>
                   setData((p) => ({ ...p, proposalConfirmed: true }))
                 }
-                className={`flex-1 py-2 rounded-lg text-sm border transition-colors
+                className={`flex-1 py-3 rounded-lg text-base border transition-colors
                   ${
                     data.proposalConfirmed === true
                       ? "bg-green-600 text-white border-green-600"
@@ -257,7 +257,7 @@ export default function LeadFormModal({
                 onClick={() =>
                   setData((p) => ({ ...p, proposalConfirmed: false }))
                 }
-                className={`flex-1 py-2 rounded-lg text-sm border transition-colors
+                className={`flex-1 py-3 rounded-lg text-base border transition-colors
                   ${
                     data.proposalConfirmed === false &&
                     data.proposalConfirmed !== undefined
@@ -272,13 +272,13 @@ export default function LeadFormModal({
 
           {/* סטטוס */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">סטטוס</label>
+            <label className="text-base font-medium text-gray-700">סטטוס</label>
             <select
               value={data.status || "new"}
               onChange={(e) =>
                 setData((p) => ({ ...p, status: e.target.value as LeadStatus }))
               }
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+              className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300"
             >
               <option value="new">ליד חדש</option>
               <option value="contacted">יצירת קשר</option>
@@ -291,35 +291,35 @@ export default function LeadFormModal({
 
           {/* הערות */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">הערות</label>
+            <label className="text-base font-medium text-gray-700">הערות</label>
             <textarea
               value={data.notes || ""}
               onChange={(e) =>
                 setData((p) => ({ ...p, notes: e.target.value }))
               }
               rows={3}
-              className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+              className="border rounded-lg px-3 py-3 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
             />
           </div>
 
           {/* ===== שדות מותאמים אישית ===== */}
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-600">
+            <label className="text-base font-medium text-gray-700">
               📌 שדות נוספים
             </label>
             <div className="border border-gray-200 rounded-xl p-3 space-y-2 bg-gray-50">
               {(data.customFields || []).length === 0 && (
-                <p className="text-gray-400 text-xs text-center py-1">
+                <p className="text-gray-400 text-sm text-center py-1">
                   אין שדות נוספים עדיין
                 </p>
               )}
               {(data.customFields || []).map((field) => (
                 <div key={field.id} className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm w-1/3 shrink-0">
+                  <span className="text-gray-600 text-base w-1/3 shrink-0">
                     {field.label}
                   </span>
                   <input
-                    className="flex-1 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
+                    className="flex-1 border border-gray-200 rounded-lg px-2 py-2 text-lg focus:outline-none focus:ring-2 focus:ring-blue-300 bg-white"
                     value={field.value}
                     placeholder="ערך..."
                     onChange={(e) =>
@@ -328,7 +328,7 @@ export default function LeadFormModal({
                   />
                   <button
                     onClick={() => setConfirmDelete(field.id)}
-                    className="text-red-400 hover:text-red-600 text-sm px-1 shrink-0"
+                    className="text-red-400 hover:text-red-600 text-base px-1 shrink-0"
                   >
                     ✕
                   </button>
@@ -337,7 +337,7 @@ export default function LeadFormModal({
               <button
                 type="button"
                 onClick={() => setShowAddField(true)}
-                className="w-full text-xs text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg py-2 mt-1"
+                className="w-full text-sm text-blue-500 hover:text-blue-700 border border-dashed border-blue-300 rounded-lg py-3 mt-1"
               >
                 + הוסף שדה
               </button>
@@ -348,16 +348,16 @@ export default function LeadFormModal({
         </div>
 
         {/* Footer */}
-        <div className="flex gap-2 p-4 border-t">
+        <div className="flex gap-2 p-4 border-t text-base">
           <button
             onClick={handleSave}
-            className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 font-medium"
+            className="flex-1 bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 font-medium"
           >
             💾 שמור
           </button>
           <button
             onClick={onClose}
-            className="flex-1 border py-2 rounded-lg hover:bg-gray-50 text-gray-600"
+            className="flex-1 border py-3 rounded-lg hover:bg-gray-50 text-gray-600"
           >
             ביטול
           </button>
