@@ -344,10 +344,10 @@ export default function Dashboard() {
           return (
             <div
               key={task.id}
-              className="grid grid-cols-[minmax(4.5rem,0.7fr)_minmax(0,3fr)] items-stretch gap-2 sm:grid-cols-[minmax(7rem,0.8fr)_minmax(0,3fr)] sm:gap-3"
+              className="grid grid-cols-[minmax(5.5rem,0.9fr)_minmax(0,3fr)] items-stretch gap-2 sm:grid-cols-[minmax(7rem,0.8fr)_minmax(0,3fr)] sm:gap-3"
             >
               <div
-                className={`flex min-w-0 flex-col items-center justify-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-2 py-4 text-center text-sm font-semibold text-blue-900 sm:flex-row sm:items-start sm:justify-center sm:px-3 sm:py-5 sm:text-base
+                className={`flex min-h-20 min-w-0 flex-col items-center justify-start gap-2 rounded-2xl border border-blue-100 bg-blue-50 px-2 py-5 text-center text-base font-semibold leading-snug text-blue-900 sm:min-h-0 sm:flex-row sm:items-start sm:justify-center sm:px-3 sm:py-5 sm:text-base
                   ${task.done ? "opacity-60" : ""}`}
                 aria-label={`בניין: ${task.buildingAddress || "לא צוין"}`}
               >
@@ -364,20 +364,20 @@ export default function Dashboard() {
                 ${task.done ? "opacity-50" : ""}`}
               >
               {/* Task Header - Clickable */}
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-x-3 gap-y-3 p-3 md:gap-4 md:p-4">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-stretch gap-x-3 gap-y-3 p-4 md:gap-4 md:p-4">
                 <button
                   type="button"
                   aria-expanded={isExpanded}
                   onClick={() => toggleExpand(task.id ?? "")}
-                  className="col-span-2 flex w-full min-w-0 items-center gap-2 rounded-xl py-2 text-right transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 md:col-span-1"
+                  className="col-span-2 flex w-full min-w-0 items-center gap-3 rounded-xl py-3 text-right transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 md:col-span-1"
                   aria-label={`משימה: ${task.title}`}
                 >
                   <span
-                    className={`h-3 w-3 shrink-0 rounded-full ${pri.dot}`}
+                    className={`h-4 w-4 shrink-0 rounded-full ${pri.dot}`}
                     aria-label={pri.label}
                   />
                   <span
-                    className={`min-w-0 flex-1 break-words text-base font-bold leading-snug md:text-lg ${task.done ? "line-through text-gray-400" : "text-gray-900"}`}
+                    className={`min-w-0 flex-1 break-words text-2xl font-bold leading-snug md:text-lg ${task.done ? "line-through text-gray-400" : "text-gray-900"}`}
                   >
                     {task.title}
                   </span>
@@ -397,7 +397,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => handleDoneClick(task)}
                       aria-label="סיים משימה"
-                      className="rounded-lg bg-green-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-green-700"
+                      className="rounded-lg bg-green-600 px-3 py-3 text-base font-semibold text-white transition-colors hover:bg-green-700"
                     >
                       ✓ סיים
                     </button>
@@ -405,7 +405,7 @@ export default function Dashboard() {
                     <button
                       onClick={() => toggleDone(task)}
                       aria-label="פתח משימה מחדש"
-                      className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 px-3 py-3 text-base text-gray-600 hover:bg-gray-50"
                     >
                       ↩️ פתח מחדש
                     </button>
@@ -413,14 +413,14 @@ export default function Dashboard() {
                   <button
                     onClick={() => openEdit(task)}
                     aria-label="ערוך משימה"
-                    className="rounded-lg border border-blue-300 px-3 py-2 text-sm text-blue-700 hover:bg-blue-50"
+                    className="rounded-lg border border-blue-300 px-3 py-3 text-base text-blue-700 hover:bg-blue-50"
                   >
                     ✏️
                   </button>
                   <button
                     onClick={() => handleDelete(task)}
                     aria-label="מחק משימה"
-                    className="rounded-lg border border-red-300 px-3 py-2 text-sm text-red-600 hover:bg-red-50"
+                    className="rounded-lg border border-red-300 px-3 py-3 text-base text-red-600 hover:bg-red-50"
                   >
                     🗑️
                   </button>
