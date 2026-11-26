@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import BuildingDetail from "./pages/BuildingDetail";
 import ContactsImport from "./pages/ContactsImport";
 import Suppliers from "./components/suppliers/Suppliers";
+import ServiceWorkerUpdateCheck from "./components/ServiceWorkerUpdateCheck";
 
 export default function App() {
   const setUser = useAuthStore((s) => s.setUser);
@@ -36,6 +37,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ServiceWorkerUpdateCheck />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
