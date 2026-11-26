@@ -92,9 +92,9 @@ export default function Dashboard() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<Partial<Task>>(EMPTY_TASK);
-  const [filter, setFilter] = useState<"all" | "today" | "overdue" | "done">(
-    "all",
-  );
+  const [filter, setFilter] = useState<
+    "all" | "today" | "overdue" | "urgent" | "done"
+  >("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [confirm, setConfirm] = useState<{
     type: "delete" | "done";
@@ -285,14 +285,14 @@ export default function Dashboard() {
     });
   };
 
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
   const filteredTasks = useMemo(() => {
     let filtered = tasks;
     if (filter === "today")
       filtered = tasks.filter((t) => isToday(t.dueDate) && !t.done);
     if (filter === "overdue")
       filtered = tasks.filter((t) => isOverdue(t.dueDate, t.done));
+    if (filter === "urgent")
+      filtered = tasks.filter((t) => t.priority === "high" && !t.done);
     if (filter === "done") filtered = tasks.filter((t) => t.done);
     if (filter === "all") filtered = tasks.filter((t) => !t.done);
 
@@ -330,13 +330,12 @@ export default function Dashboard() {
     }
 
     return [...filtered].sort((a, b) => {
-      const aOver = isOverdue(a.dueDate, a.done) ? 0 : 1;
-      const bOver = isOverdue(b.dueDate, b.done) ? 0 : 1;
-      if (aOver !== bOver) return aOver - bOver;
-      const aPri = priorityOrder[a.priority || "low"];
-      const bPri = priorityOrder[b.priority || "low"];
-      if (aPri !== bPri) return aPri - bPri;
-      return (a.dueDate || "").localeCompare(b.dueDate || "");
+      const aDueDate = a.dueDate || "9999-12-31";
+      const bDueDate = b.dueDate || "9999-12-31";
+      return (
+        aDueDate.localeCompare(bDueDate) ||
+        (a.title || "").localeCompare(b.title || "", "he")
+      );
     });
   }, [tasks, filter, searchQuery]);
 
@@ -353,6 +352,14 @@ export default function Dashboard() {
       ),
     ].sort((a, b) => a.localeCompare(b, "he"));
   }, [buildings, searchQuery]);
+
+  const taskFilters = [
+    { id: "all", label: "פתוחות" },
+    { id: "today", label: "היום" },
+    { id: "urgent", label: "דחופות" },
+    { id: "overdue", label: "באיחור" },
+    { id: "done", label: "הושלמו" },
+  ] as const;
 
   return (
     <div dir="rtl" className="max-w-5xl mx-auto pb-20">
@@ -459,15 +466,10 @@ export default function Dashboard() {
       </label>
 
       <div className="flex gap-2 mb-4 flex-wrap">
-        {[
-          { id: "all", label: "פתוחות" },
-          { id: "today", label: "היום" },
-          { id: "overdue", label: "באיחור" },
-          { id: "done", label: "הושלמו" },
-        ].map((f) => (
+        {taskFilters.map((f) => (
           <button
             key={f.id}
-            onClick={() => setFilter(f.id as any)}
+            onClick={() => setFilter(f.id)}
             className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors
               ${
                 filter === f.id
@@ -494,6 +496,8 @@ export default function Dashboard() {
               ? "לא נמצאו משימות שמתאימות לחיפוש"
               : filter === "done"
               ? "אין משימות שהושלמו"
+              : filter === "urgent"
+                ? "אין משימות דחופות"
               : "🎉 אין משימות! הכל נקי"}
           </div>
         )}
