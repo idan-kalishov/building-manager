@@ -14,6 +14,8 @@ import AddUpdateForm from "../components/updates/AddUpdateForm.tsx";
 import SupplierSelector from "../components/suppliers/SupplierSelector.tsx";
 import BuildingAddressInput from "../components/BuildingAddressInput";
 import DueDatePicker from "../components/DueDatePicker";
+import { subscribeBuildings } from "../lib/buildings.service";
+import { useBuildingsStore } from "../store/buildingsStore";
 
 const PRIORITY_CONFIG: Record<
   TaskPriority,
@@ -85,12 +87,15 @@ const EMPTY_TASK: Partial<Task> = {
 
 export default function Dashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [buildingSearchFocused, setBuildingSearchFocused] = useState(false);
+  const [activeBuildingSuggestion, setActiveBuildingSuggestion] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const [form, setForm] = useState<Partial<Task>>(EMPTY_TASK);
   const [filter, setFilter] = useState<"all" | "today" | "overdue" | "done">(
     "all",
   );
+  const [searchQuery, setSearchQuery] = useState("");
   const [confirm, setConfirm] = useState<{
     type: "delete" | "done";
     task: Task;
@@ -111,11 +116,15 @@ export default function Dashboard() {
   const [taskNotes, setTaskNotes] = useState("");
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>("");
   const [selectedSupplierName, setSelectedSupplierName] = useState<string>("");
+  const buildings = useBuildingsStore((state) => state.buildings);
+  const setBuildings = useBuildingsStore((state) => state.setBuildings);
 
   useEffect(() => {
     const unsub = subscribeTasks(setTasks);
     return unsub;
   }, []);
+
+  useEffect(() => subscribeBuildings(setBuildings), [setBuildings]);
 
   const openAdd = () => {
     setEditing(null);
@@ -287,6 +296,39 @@ export default function Dashboard() {
     if (filter === "done") filtered = tasks.filter((t) => t.done);
     if (filter === "all") filtered = tasks.filter((t) => !t.done);
 
+    const searchTerms = searchQuery
+      .trim()
+      .toLocaleLowerCase("he")
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (searchTerms.length) {
+      filtered = filtered.filter((task) => {
+        const searchableText = [
+          task.title,
+          task.description,
+          task.buildingAddress,
+          task.notes,
+          task.supplierName,
+          ...(task.contactPersons || []).flatMap((person) => [
+            person.name,
+            person.phone,
+            person.role,
+            person.notes,
+          ]),
+          ...(task.updates || []).flatMap((update) => [
+            update.message,
+            update.technician,
+          ]),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLocaleLowerCase("he");
+
+        return searchTerms.every((term) => searchableText.includes(term));
+      });
+    }
+
     return [...filtered].sort((a, b) => {
       const aOver = isOverdue(a.dueDate, a.done) ? 0 : 1;
       const bOver = isOverdue(b.dueDate, b.done) ? 0 : 1;
@@ -296,13 +338,126 @@ export default function Dashboard() {
       if (aPri !== bPri) return aPri - bPri;
       return (a.dueDate || "").localeCompare(b.dueDate || "");
     });
-  }, [tasks, filter]);
+  }, [tasks, filter, searchQuery]);
+
+  const buildingSuggestions = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase("he");
+    return [
+      ...new Set(
+        buildings
+          .map((building) => building.address)
+          .filter((address) => address)
+          .filter((address) =>
+            query ? address.toLocaleLowerCase("he").includes(query) : true,
+          ),
+      ),
+    ].sort((a, b) => a.localeCompare(b, "he"));
+  }, [buildings, searchQuery]);
 
   return (
     <div dir="rtl" className="max-w-5xl mx-auto pb-20">
       <h1 className="text-2xl font-bold mb-4">📋 לוח משימות</h1>
 
-      {/* Filters + Add */}
+      {/* Search, Filters + Add */}
+      <label className="mb-3 block">
+        <span className="sr-only">חיפוש משימות לפי בניין או מלל</span>
+        <span className="relative block">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-400"
+          >
+            🔍
+          </span>
+          <input
+            type="text"
+            value={searchQuery}
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={
+              buildingSearchFocused && buildingSuggestions.length > 0
+            }
+            aria-controls="task-building-search-suggestions"
+            aria-activedescendant={
+              buildingSearchFocused && buildingSuggestions.length > 0
+                ? `task-building-search-suggestion-${activeBuildingSuggestion}`
+                : undefined
+            }
+            onFocus={() => setBuildingSearchFocused(true)}
+            onBlur={() => setBuildingSearchFocused(false)}
+            onChange={(event) => {
+              setSearchQuery(event.target.value);
+              setActiveBuildingSuggestion(0);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setBuildingSearchFocused(false);
+              if (event.key === "ArrowDown" && buildingSuggestions.length) {
+                event.preventDefault();
+                setBuildingSearchFocused(true);
+                setActiveBuildingSuggestion((index) =>
+                  Math.min(index + 1, buildingSuggestions.length - 1),
+                );
+              }
+              if (event.key === "ArrowUp" && buildingSuggestions.length) {
+                event.preventDefault();
+                setActiveBuildingSuggestion((index) => Math.max(index - 1, 0));
+              }
+              if (
+                event.key === "Enter" &&
+                buildingSearchFocused &&
+                buildingSuggestions.length
+              ) {
+                event.preventDefault();
+                setSearchQuery(buildingSuggestions[activeBuildingSuggestion]);
+                setBuildingSearchFocused(false);
+              }
+            }}
+            placeholder="חיפוש לפי בניין או מלל במשימה..."
+            className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-10 pr-10 text-base shadow-sm focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          />
+          {buildingSearchFocused && buildingSuggestions.length > 0 && (
+            <div
+              id="task-building-search-suggestions"
+              role="listbox"
+              className="absolute right-0 top-full z-30 mt-2 max-h-60 w-full overflow-y-auto rounded-xl border border-gray-200 bg-white p-1.5 shadow-lg"
+            >
+              {buildingSuggestions.map((address, index) => (
+                <button
+                  id={`task-building-search-suggestion-${index}`}
+                  key={address}
+                  type="button"
+                  role="option"
+                  aria-selected={index === activeBuildingSuggestion}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onMouseEnter={() => setActiveBuildingSuggestion(index)}
+                  onClick={() => {
+                    setSearchQuery(address);
+                    setBuildingSearchFocused(false);
+                  }}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-right text-base transition-colors ${
+                    index === activeBuildingSuggestion
+                      ? "bg-blue-50 text-blue-800"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                >
+                  <span aria-hidden="true">🏢</span>
+                  <span>{address}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              aria-label="נקה חיפוש"
+              className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full px-2 py-1 text-gray-500 hover:bg-gray-100"
+            >
+              ×
+            </button>
+          )}
+        </span>
+      </label>
+
       <div className="flex gap-2 mb-4 flex-wrap">
         {[
           { id: "all", label: "פתוחות" },
@@ -335,7 +490,9 @@ export default function Dashboard() {
       <div className="space-y-2">
         {filteredTasks.length === 0 && (
           <div className="text-center text-gray-400 py-16 text-sm">
-            {filter === "done"
+            {searchQuery.trim()
+              ? "לא נמצאו משימות שמתאימות לחיפוש"
+              : filter === "done"
               ? "אין משימות שהושלמו"
               : "🎉 אין משימות! הכל נקי"}
           </div>
