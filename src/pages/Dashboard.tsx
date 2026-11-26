@@ -70,6 +70,12 @@ function isToday(dateStr?: string) {
   return dateStr === new Date().toISOString().split("T")[0];
 }
 
+function formatTaskDate(dateStr: string) {
+  const [year, month, day] = dateStr.split("-");
+  if (!year || !month || !day) return dateStr;
+  return `${day}-${month}-${year}`;
+}
+
 const EMPTY_TASK: Partial<Task> = {
   priority: "medium",
   updates: [],
@@ -454,8 +460,12 @@ export default function Dashboard() {
                         <p
                           className={`text-base font-medium ${overdue ? "text-red-600" : today ? "text-orange-600" : "text-gray-800"}`}
                         >
-                          📅 {task.dueDate}
-                          {overdue ? " · באיחור" : today ? " · היום" : ""}
+                          <span dir="ltr" className="inline-block">
+                            📅 {formatTaskDate(task.dueDate)}
+                          </span>
+                          {(overdue || today) && (
+                            <span>{overdue ? " · באיחור" : " · היום"}</span>
+                          )}
                         </p>
                       </div>
                     )}

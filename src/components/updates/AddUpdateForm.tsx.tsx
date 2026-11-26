@@ -20,8 +20,7 @@ export default function AddUpdateForm({
   const [updateDueDate, setUpdateDueDate] = useState(false);
   const [newDueDate, setNewDueDate] = useState(currentDueDate || "");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitUpdate = () => {
     if (!message.trim()) {
       alert("אנא הזן תוכן עדכון");
       return;
@@ -39,6 +38,11 @@ export default function AddUpdateForm({
     setTechnician("גדי");
     setUpdateDueDate(false);
     setNewDueDate(currentDueDate || "");
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    submitUpdate();
   };
 
   return (
@@ -70,6 +74,12 @@ export default function AddUpdateForm({
       <textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            submitUpdate();
+          }
+        }}
         placeholder="למשל: בדקתי את המעלית, תקלה במנוע... או: תיקון הושלם, מחכה לאישור..."
         rows={2}
         className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
@@ -102,17 +112,11 @@ export default function AddUpdateForm({
 
       {/* Buttons */}
       <div className="flex gap-2">
-        <button
-          type="submit"
-          className="flex-1 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-        >
-          הוסף עדכון
-        </button>
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm"
+            className="w-full px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-50 text-sm"
           >
             ביטול
           </button>
