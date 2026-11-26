@@ -72,6 +72,7 @@ export default function AddUpdateForm({
 
       {/* Update Message */}
       <textarea
+        autoFocus
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         onKeyDown={(e) => {
